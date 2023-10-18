@@ -97,7 +97,6 @@ class Building:
         self.center_point = center_point
         self.building_function = building_function
         # self.structure_type = structure_type
-        # self.functionality = functionality
         # self.plan_area = plan_area  # ground cover in square meters
         # self.height = height
         # self.age = age  # from completion date
