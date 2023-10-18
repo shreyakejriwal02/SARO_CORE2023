@@ -80,9 +80,8 @@ class Area:
         self.sub_areas.append(sub_area)
 
 class Sub_Area:
-    def __init__(self, sub_area_id, name):
+    def __init__(self, sub_area_id):
         self.sub_area_id = sub_area_id
-        self.name = name
         self.buildings = [] 
         self.area = None
 
