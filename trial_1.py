@@ -91,16 +91,16 @@ class Sub_Area:
         building.area = self.area
 
 class Building:
-    def __init__(self, building_id, x_coordinate, y_coordinate, structure_type, functionality, plan_area, height, age):
+    def __init__(self, building_id, geometry, center_point, building_function):
         self.building_id = building_id    # from GIS data
-        self.geometry = None   # from GIS data
-        self.x_coordinate = x_coordinate    # from centroid_x
-        self.y_coordinate = y_coordinate    # from centroid_y
-        self.structure_type = structure_type
-        self.functionality = functionality
-        self.plan_area = plan_area  # ground cover in square meters
-        self.height = height
-        self.age = age  # from completion date
+        self.geometry = geometry   # from GIS data
+        self.center_point = center_point
+        self.building_function = building_function
+        # self.structure_type = structure_type
+        # self.functionality = functionality
+        # self.plan_area = plan_area  # ground cover in square meters
+        # self.height = height
+        # self.age = age  # from completion date
         self.area = None  # Reference to the Area object containing this building
         self.sub_area = None  # Reference to the SubArea object containing this building
     
