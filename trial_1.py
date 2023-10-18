@@ -104,30 +104,30 @@ class Building:
         self.area = None  # Reference to the Area object containing this building
         self.sub_area = None  # Reference to the SubArea object containing this building
     
-# add a building entry to the building list
-building_1 = Building(1, 1, 1, 1, 1, 1, 1, 1)
-building_2 = Building(2, 2, 2, 2, 2, 2, 2, 2)
+# # add a building entry to the building list
+# building_1 = Building(1, 1, 1, 1, 1, 1, 1, 1)
+# building_2 = Building(2, 2, 2, 2, 2, 2, 2, 2)
 
-# add buildings to sub areas
-sub_area_1 = Sub_Area(1, "sub_area_1")
-sub_area_1.add_building(building_1)
+# # add buildings to sub areas
+# sub_area_1 = Sub_Area(1, "sub_area_1")
+# sub_area_1.add_building(building_1)
 
-sub_area_2 = Sub_Area(2, "sub_area_2")
-sub_area_2.add_building(building_2)
+# sub_area_2 = Sub_Area(2, "sub_area_2")
+# sub_area_2.add_building(building_2)
 
-# add sub areas to areas
-area_1 = Area(1, "area_1")
-area_1.add_sub_area(sub_area_1)
-area_1.add_sub_area(sub_area_2)
+# # add sub areas to areas
+# area_1 = Area(1, "area_1")
+# area_1.add_sub_area(sub_area_1)
+# area_1.add_sub_area(sub_area_2)
 
-# create a csv file with building data in each sub area and area
-import pandas as pd
+# # create a csv file with building data in each sub area and area
+# import pandas as pd
 
-# create a csv file with building data in each sub area and area
-df = pd.DataFrame(columns=["building_id", "sub_area_id", "area_id"])
-# add data to df from building class, subarea class and area class
-for sub_area in area_1.sub_areas:
-    for building in sub_area.buildings:
-        df = pd.concat([df, pd.DataFrame({"building_id": [building.building_id], "sub_area_id": [sub_area.sub_area_id], "area_id": [area_1.area_id]})], ignore_index=True)
+# # create a csv file with building data in each sub area and area
+# df = pd.DataFrame(columns=["building_id", "sub_area_id", "area_id"])
+# # add data to df from building class, subarea class and area class
+# for sub_area in area_1.sub_areas:
+#     for building in sub_area.buildings:
+#         df = pd.concat([df, pd.DataFrame({"building_id": [building.building_id], "sub_area_id": [sub_area.sub_area_id], "area_id": [area_1.area_id]})], ignore_index=True)
 
-print(df)
+# print(df)
