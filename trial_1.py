@@ -71,9 +71,10 @@ import matplotlib.pyplot as plt
 
 
 class Area:
-    def __init__(self, area_id, name):
+    def __init__(self, area_id, name, priority_weight):
         self.area_id = area_id
         self.name = name
+        self.priority_weight = priority_weight
         self.sub_areas = []
 
     def add_sub_area(self, sub_area):
