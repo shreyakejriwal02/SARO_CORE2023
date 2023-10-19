@@ -2,6 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import random
 
 # # import building polygons and road network from GIS data
 
@@ -71,10 +72,10 @@ import matplotlib.pyplot as plt
 
 
 class Area:
-    def __init__(self, area_id, name, priority_weight):
+    def __init__(self, area_id, name):
         self.area_id = area_id
         self.name = name
-        self.priority_weight = priority_weight
+        self.priority_weight = np.average([o.priority_weight for o in self.sub_areas]) 
         self.sub_areas = []
 
     def add_sub_area(self, sub_area):
@@ -85,11 +86,13 @@ class Sub_Area:
         self.sub_area_id = sub_area_id
         self.buildings = [] 
         self.area = None
+        self.priority_weight = None
 
     def add_building(self, building):
         self.buildings.append(building)
         building.sub_areas = self
         building.area = self.area
+        self.priority_weight = np.average([o.priority_weight for o in self.buildings]) 
 
 class Building:
     def __init__(self, building_id, geometry, center_point, building_function):
@@ -101,6 +104,9 @@ class Building:
         # self.plan_area = plan_area  # ground cover in square meters
         # self.height = height
         # self.age = age  # from completion date
+        
+        self.priority_weight = random.randint(0, 100)
+        
         self.area = None  # Reference to the Area object containing this building
         self.sub_area = None  # Reference to the SubArea object containing this building
     
