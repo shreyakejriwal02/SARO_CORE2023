@@ -103,6 +103,22 @@ class Building:
         self.area = None  # Reference to the Area object containing this building
         self.sub_area = None  # Reference to the SubArea object containing this building
     
+class Team:
+    def __init__(self, team_id, team_type, team_sub_teams):
+        self.team_id = team_id
+        self.team_type = team_type  # heavy, medium, or light
+        self.team_sub_teams = team_sub_teams
+        
+class Sub_Team:
+    def __init__(self, sub_team_id, team_members):
+        self.sub_team_id = sub_team_id
+        self.team_members = team_members
+    
+class Team_Member:
+    def __init__(self, team_member_id, competence):
+        self.team_member_id = team_member_id
+        self.competence = competence
+    
 # # add a building entry to the building list
 # building_1 = Building(1, 1, 1, 1, 1, 1, 1, 1)
 # building_2 = Building(2, 2, 2, 2, 2, 2, 2, 2)
