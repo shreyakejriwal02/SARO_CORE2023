@@ -88,6 +88,7 @@ class Sub_Area:
         self.buildings = [] 
         self.area = None
         self.priority_weight = None
+        self.sub_team = None
 
     def add_building(self, building):
         self.buildings.append(building)
@@ -128,6 +129,7 @@ class Sub_Team:
         self.team_members = []
         self.team = None
         self.competence = None
+        self.sub_area = None
         
     def add_team_member(self, team_member):
         self.team_members.append(team_member)
@@ -135,6 +137,11 @@ class Sub_Team:
         team_member.team = self.team
         self.competence = np.average([o.competence for o in self.team_members])
     
+    def assign_sub_area(self, sub_area):
+        self.sub_area = sub_area
+        sub_area.sub_team = self
+
+
 class Team_Member:
     def __init__(self, team_member_id, competence):
         self.team_member_id = team_member_id
