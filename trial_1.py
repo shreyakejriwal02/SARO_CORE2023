@@ -83,8 +83,9 @@ class Area:
         self.priority_weight = np.average([o.priority_weight for o in self.sub_areas]) 
 
 class Sub_Area:
-    def __init__(self, sub_area_id):
+    def __init__(self, sub_area_id, geometry):
         self.sub_area_id = sub_area_id
+        self.geometry = geometry
         self.buildings = [] 
         self.area = None
         self.priority_weight = None
