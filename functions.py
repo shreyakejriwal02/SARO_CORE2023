@@ -7,6 +7,25 @@ import random
 import math
 import scipy.stats as stats
 from typing import List, Tuple
+from random import choices
+from trial_1 import Building
+from trial_1 import Area
+from shapely.geometry import Polygon
+from shapely.geometry import box
+from trial_1 import Earthquake
+from matplotlib.patches import Polygon as mpl_polygon
+from trial_1 import Sub_Area
+from trial_1 import Team
+from trial_1 import Sub_Team
+from trial_1 import Team_Member
+import itertools
+from typing import List, Tuple
+import re
+import networkx as nx
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.colors import LinearSegmentedColormap
+
 
 #--- COLLECT DATA FROM OPEN STREET MAPS---
 def assign_building_attributes(buildings_gdf):
@@ -403,12 +422,6 @@ def assign_injury_numbers(consolidated_bldgdataframe, bldngs, medbetatable, equa
         resultfiction= [(int(popnight)-2*q-2*r-2*s-2*t),2*q,2*r,2*s,2*t] #the result values were unrealistically low, - not meaningful for part B    
         return np.round(resultfiction)
 
-
-
-
-
-
-
     if 900 < equake.time < 1800:
         consolidated_bldgdataframe['injuries'] = consolidated_bldgdataframe.apply(injury_profile_compute_day, axis =1)
         # print('day')
@@ -421,6 +434,689 @@ def assign_injury_numbers(consolidated_bldgdataframe, bldngs, medbetatable, equa
     #final datafraem from part A
     partA_data= consolidated_bldgdataframe
     return partA_data
+
+
+# defines a function which imports multiple areas
+def import_areas(addresses):
+    areas = []
+    areas_gdf = []
+    for address in addresses:
+        # loads the area as a geodataframe
+        area_gdf = ox.geocode_to_gdf(address)
+        # area_gdf = area_gdf.to_crs(epsg=32637)
+        areas_gdf.append(area_gdf)
+
+        # extracts the area id, name and addresstype
+        area_id = area_gdf.loc[0, 'osm_id']
+        geometry = area_gdf.loc[0, 'geometry']
+        name = area_gdf.loc[0, 'name']
+        address = address
+        addresstype = area_gdf.loc[0, 'addresstype']
+
+        minx = area_gdf.loc[0, 'bbox_west']
+        miny = area_gdf.loc[0, 'bbox_south']
+        maxx = area_gdf.loc[0, 'bbox_east']
+        maxy = area_gdf.loc[0, 'bbox_north']
+        bbox = box(minx, miny, maxx, maxy)
+
+        # creates an area object and appends it to the list
+        area = Area(area_id, geometry, bbox, name, address, addresstype)
+        areas.append(area)
+    return areas, areas_gdf
+
+addresses = ['Sarıgüllük Mahallesi', 'Gazi Mah., Gaziantep', 'Pancarlı Mahallesi']
+areas, areas_gdf = import_areas(addresses)
+
+
+
+# defines a function which imports all buildings in an area
+def import_buildings(area, earthquake):
+    # importing osm location
+    geometry = area.geometry
+    buildings = ox.features.features_from_polygon(geometry, tags={'building': True})
+    consolidated_bldgdataframe, bldngs = assign_building_attributes(buildings)
+    consolidated_bldgdataframe, medbetatable = assign_fragility_attributes(consolidated_bldgdataframe, bldngs, earthquake)
+    partA_data = assign_injury_numbers(consolidated_bldgdataframe, bldngs, medbetatable, earthquake)
+    
+    # creating object for each building
+    bld_lst = []
+    for i in partA_data.index:
+        id = partA_data.loc[i, 'osmid']
+        geo = partA_data.loc[i, 'geometry']
+        center_point = geo.centroid
+        occupancy_type = partA_data.loc[i, 'occupancytype']
+        footprint = partA_data.loc[i, 'Footprint']
+        structural_system = partA_data.loc[i, 'structural_system']
+        lateral_resistance = partA_data.loc[i, 'lateral_resistance']
+        stories = partA_data.loc[i, 'height']
+        population_day = partA_data.loc[i, 'population day']
+        population_night = partA_data.loc[i, 'population night']
+        damage_state_probabilities = [partA_data.loc[i, 'p_ds2'], partA_data.loc[i, 'p_ds3'], partA_data.loc[i, 'p_ds4'], partA_data.loc[i, 'p_ds5']]
+        injuries = partA_data.loc[i, 'injuries']
+
+        bld = Building(id, geo, center_point, occupancy_type, footprint, structural_system, lateral_resistance, stories, population_day, population_night, damage_state_probabilities, injuries)
+        bld_lst.append(bld)
+        area.add_building(bld)
+
+    return bld_lst
+
+
+
+# defines a function which generates sub_areas by dividing the boundary of all combined buildings in cells, x_steps = n of cells in x dir, y_steps = n of cells in y dir, and associating buildings with sub_areas
+def generate_sub_areas(area, buildings, x_steps, y_steps):
+    # set bounds of graph to the bounds of center points
+    xmin, ymin, xmax, ymax = area.bbox.bounds
+    x_range = xmax - xmin
+    y_range = ymax - ymin
+
+    # set stepsize
+    width = x_range / x_steps
+    height = y_range / y_steps
+
+    # create cols and rows based on bounds and stepsize
+    cols = list(np.arange(xmin, xmax + width, width))
+    rows = list(np.arange(ymin, ymax + height, height))
+
+    # sort the list of buildings objects based on x coordinates, then y coordinates
+    sorted_blds = sorted(buildings, key=lambda x: (x.center_point.x, x.center_point.y))
+
+    # create cells and plot to graph, add buildings to subarea classes
+    sub_areas = []
+    i = 0
+    j = 0
+    for x in cols[:-1]:
+        # while the buildings have x values in the range of this column, add them to a list
+        filt_blds = []
+        while (i < len(sorted_blds)) and (sorted_blds[i].center_point.x >= x) and (sorted_blds[i].center_point.x < (x+width)): 
+            filt_blds.append(sorted_blds[i])
+            filt_blds = sorted(filt_blds, key=lambda x: (x.center_point.y))
+            i += 1
+            
+        for y in rows[:-1]:
+            # create a cell, sub_area object, and associate the cell with the object
+            polygon = Polygon([(x,y), (x+width, y), (x+width, y+height), (x, y+height)])
+            sub_area = Sub_Area(j, polygon)
+            
+            # while the buildings in that column have y values in the range of this row, add them to the cell object 
+            while (len(filt_blds) > 0) and (filt_blds[0].center_point.y >= y) and (filt_blds[0].center_point.y < (y+height)):
+                sub_area.add_building(filt_blds.pop(0))
+
+            # only add the sub_area if it has buildings in it
+            if sub_area.buildings != []:
+                sub_areas.append(sub_area)
+            
+                # add the sub_areas to the area
+                area.add_sub_area(sub_area)
+
+                # crop the geometry of the sub_area with the are geometry
+                sub_area.crop_geometry()
+
+                j += 1           
+    return sub_areas
+
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_geometry(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal')
+
+    for a in areas:
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # plot the sub_area geometry        
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', linewidth=0.2)
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # choices of different colours with corresponding weights
+        # population = ['green', 'blue', 'yellow', 'orange', 'red']
+        population = ['#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D']
+        weights = [0.45, 0.05, 0.15, 0.12, 0.23]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for g in geos:
+            c = choices(population, weights)[0]
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    plt.show()
+    
+
+
+def allocate_teams_to_areas(areas, sector_n_heavy_teams, sector_n_med_teams, sector_n_light_teams, 
+                            sector_n_task_force_teams, sector_n_fire_fighter_teams, 
+                            sector_n_police_teams, sector_n_volunteer_teams):
+    # define the number of people per team
+    heavy_n_people = 24
+    medium_n_people = 12
+    light_n_people = 6
+    task_force_n_people = 6
+    fire_fighter_n_people = 6
+    police_n_people = 6
+    volunteer_n_people = 6
+
+    # calculate the total number of people required
+    total_people = (heavy_n_people * sector_n_heavy_teams) + (medium_n_people * sector_n_med_teams) + (light_n_people * sector_n_light_teams) + (task_force_n_people * sector_n_task_force_teams) + (fire_fighter_n_people * sector_n_fire_fighter_teams) + (police_n_people * sector_n_police_teams) + (volunteer_n_people * sector_n_volunteer_teams) 
+    total_priority = 0
+    for a in areas:
+        total_priority += a.priority_weight
+    
+    # calculate the number of people required per priority weight
+    people_per_priority = total_people / total_priority
+
+    # calculate the number of people required per area
+    for a in areas:
+        a.people_requirement = a.priority_weight * people_per_priority
+
+    # sort the areas by people requirement
+    sorted_areas = sorted(areas, key=lambda x: (x.people_requirement), reverse=True)
+
+    # reset allocation of teams
+    for a in areas:
+        a.heavy_teams = 0
+        a.med_teams = 0
+        a.light_teams = 0
+        a.task_force_teams = 0
+        a.fire_fighter_teams = 0
+        a.police_teams = 0
+        a.volunteer_teams = 0
+
+    # allocate teams to areas
+    while sector_n_heavy_teams > 0 or sector_n_med_teams > 0 or sector_n_light_teams > 0 or sector_n_task_force_teams > 0 or sector_n_fire_fighter_teams > 0 or sector_n_police_teams > 0 or sector_n_volunteer_teams > 0:
+        if sector_n_heavy_teams > 0:
+            # allocate team to the area with highest people requirement
+            sorted_areas[0].heavy_teams += 1
+            sector_n_heavy_teams -= 1
+            # edit the people requirement of the area and resort the list
+            sorted_areas[0].people_requirement -= heavy_n_people
+            sorted_areas = sorted(sorted_areas, key=lambda x: (x.people_requirement), reverse=True)
+        elif sector_n_med_teams > 0:
+            # allocate team to the area with highest people requirement
+            sorted_areas[0].med_teams += 1
+            sector_n_med_teams -= 1
+            # edit the people requirement of the area and resort the list
+            sorted_areas[0].people_requirement -= medium_n_people
+            sorted_areas = sorted(sorted_areas, key=lambda x: (x.people_requirement), reverse=True)
+        elif sector_n_light_teams > 0:
+            # allocate team to the area with highest people requirement
+            sorted_areas[0].light_teams += 1
+            sector_n_light_teams -= 1
+            # edit the people requirement of the area and resort the list
+            sorted_areas[0].people_requirement -= light_n_people
+            sorted_areas = sorted(sorted_areas, key=lambda x: (x.people_requirement), reverse=True)
+        elif sector_n_task_force_teams > 0:
+            # allocate team to the area with highest people requirement
+            sorted_areas[0].task_force_teams += 1
+            sector_n_task_force_teams -= 1
+            # edit the people requirement of the area and resort the list
+            sorted_areas[0].people_requirement -= task_force_n_people
+            sorted_areas = sorted(sorted_areas, key=lambda x: (x.people_requirement), reverse=True)
+        elif sector_n_fire_fighter_teams > 0:
+            # allocate team to the area with highest people requirement
+            sorted_areas[0].fire_fighter_teams += 1
+            sector_n_fire_fighter_teams -= 1
+            # edit the people requirement of the area and resort the list
+            sorted_areas[0].people_requirement -= fire_fighter_n_people
+            sorted_areas = sorted(sorted_areas, key=lambda x: (x.people_requirement), reverse=True)
+        elif sector_n_police_teams > 0:
+            # allocate team to the area with highest people requirement
+            sorted_areas[0].police_teams += 1
+            sector_n_police_teams -= 1
+            # edit the people requirement of the area and resort the list
+            sorted_areas[0].people_requirement -= police_n_people
+            sorted_areas = sorted(sorted_areas, key=lambda x: (x.people_requirement), reverse=True)   
+        elif sector_n_volunteer_teams > 0:
+            # allocate team to the area with highest people requirement
+            sorted_areas[0].volunteer_teams += 1
+            sector_n_volunteer_teams -= 1
+            # edit the people requirement of the area and resort the list
+            sorted_areas[0].people_requirement -= volunteer_n_people
+            sorted_areas = sorted(sorted_areas, key=lambda x: (x.people_requirement), reverse=True)                                  
+
+
+
+# defines a function which creates team, sub-team and team_member objects based on a number of heavy, medium and light teams in an area
+def set_teams(heavy, med, light, task_force, fire_fighters, police, volunteer):
+    # set number of heavy, medium, light, police, fire_fighters and task_force teams
+    n_heavy = heavy
+    n_med = med
+    n_light = light
+    n_police = police
+    n_fire_fighters = fire_fighters
+    n_task_force = task_force
+    n_volunteer = volunteer
+
+    # initialise list of teams and team ids
+    teams = []
+    team_id = 0
+    sub_team_id = 0
+    
+    # create heavy teams, subteams and teammembers
+    for i in range(n_heavy):
+        team = Team(team_id, 'heavy')
+        for j in range(4):
+            sub_team = Sub_Team(sub_team_id, 'heavy')
+            sub_team_member_id = 0
+            for k in range(6):
+                team_member = Team_Member(sub_team_member_id,'heavy')       # Create a team member
+                sub_team.add_team_member(team_member)                   # Add the team member to the sub-team
+                sub_team_member_id += 1                                     # Increment the sub_team_member_id
+            sub_team.calculate_action_counts()          # Calculate action counts for the sub-team
+            sub_team.calculate_phase1_competence()   # Calculate the phase1_competence for the sub-team
+            team.add_sub_team(sub_team)                                 # Add the sub-team to the team
+            sub_team_id += 1                                            # Increment the sub_team_id
+        teams.append(team)                                              # Add the team to the teams list
+        team_id += 1                                                    # Increment the team_id
+   
+    # create medium teams, subteams and teammembers
+    for i in range(n_med):
+        team = Team(team_id, 'medium')
+        for j in range(4):
+            sub_team = Sub_Team(sub_team_id, 'medium')
+            sub_team_member_id = 0
+            for k in range(6):
+                team_member = Team_Member(sub_team_member_id, 'medium')       
+                sub_team.add_team_member(team_member)           
+                sub_team_member_id += 1                             
+            sub_team.calculate_action_counts()              
+            sub_team.calculate_phase1_competence()   
+            team.add_sub_team(sub_team)                         
+            sub_team_id += 1                                   
+        teams.append(team)                                      
+        team_id += 1                                            
+        
+    # create light teams, subteams and teammembers
+    for i in range(n_light):
+        team = Team(team_id, 'light')
+        for j in range(1):
+            sub_team = Sub_Team(sub_team_id, 'light')
+            sub_team_member_id = 0
+            for k in range(6):
+                team_member = Team_Member(sub_team_member_id, 'light')      
+                sub_team.add_team_member(team_member)           
+                sub_team_member_id += 1                             
+            sub_team.calculate_action_counts()  
+            sub_team.calculate_phase1_competence()   
+            team.add_sub_team(sub_team)                         
+            sub_team_id += 1                                   
+        teams.append(team)                                      
+        team_id += 1  
+
+    # create task force team, subteams and teammembers
+    for i in range(n_task_force):
+        team = Team(team_id, 'task_force')
+        for j in range(1):
+            sub_team = Sub_Team(sub_team_id, 'task_force')
+            sub_team_member_id = 0
+            for k in range(6):
+                team_member = Team_Member(sub_team_member_id, 'task_force')       
+                sub_team.add_team_member(team_member)           
+                sub_team_member_id += 1                             
+            sub_team.calculate_action_counts()              
+            sub_team.calculate_phase1_competence()   
+            team.add_sub_team(sub_team)                         
+            sub_team_id += 1                                   
+        teams.append(team)                                      
+        team_id += 1         
+   
+    # create fire_fighters team, subteam and teammembers
+    for i in range(n_fire_fighters):
+        team = Team(team_id, 'fire_fighter')
+        for j in range(1):
+            sub_team = Sub_Team(sub_team_id, 'fire_fighter')
+            sub_team_member_id = 0
+            for k in range(6):
+                team_member = Team_Member(sub_team_member_id, 'fire_fighter')       
+                sub_team.add_team_member(team_member)           
+                sub_team_member_id += 1                             
+            sub_team.calculate_action_counts()
+            sub_team.calculate_phase1_competence()   
+            team.add_sub_team(sub_team)                         
+            sub_team_id += 1                                   
+        teams.append(team)                                      
+        team_id += 1 
+ 
+    # create police_team, subteam and teammembers
+    for i in range(n_police):
+        team = Team(team_id, 'police')
+        for j in range(1):
+            sub_team = Sub_Team(sub_team_id, 'police')
+            sub_team_member_id = 0
+            for k in range(6):
+                team_member = Team_Member(sub_team_member_id, 'police')       
+                sub_team.add_team_member(team_member)           
+                sub_team_member_id += 1                             
+            sub_team.calculate_action_counts()  
+            sub_team.calculate_phase1_competence()   
+            team.add_sub_team(sub_team)                         
+            sub_team_id += 1                                   
+        teams.append(team)                                      
+        team_id += 1   
+
+    # create volunteer, subteams and teammembers
+    for i in range(n_volunteer):
+        team = Team(team_id, 'volunteer')
+        for j in range(1):
+            sub_team = Sub_Team(sub_team_id, 'volunteer')
+            sub_team_member_id = 0
+            for k in range(6):
+                team_member = Team_Member(sub_team_member_id, 'volunteer')       
+                sub_team.add_team_member(team_member)           
+                sub_team_member_id += 1                             
+            sub_team.calculate_action_counts()              
+            sub_team.calculate_phase1_competence()   
+            team.add_sub_team(sub_team)                         
+            sub_team_id += 1                                   
+        teams.append(team)                                      
+        team_id += 1 
+
+    # Return the 'teams' list after creating all teams
+    return teams
+
+
+
+# defines a function which puts all subteams in multiple teams 
+def get_sub_teams(teams):
+    # access and create sub_teams list
+    sub_teams = []
+    for tm in teams:
+        for stm in tm.sub_teams:
+            sub_teams.append(stm)
+    return sub_teams
+
+
+
+def print_phase1_competence(teams):
+    # Create lists to store the data
+    team_ids = [] 
+    team_class = []
+    sub_team_ids = []
+    sub_team_competence = []
+
+    # Iterate through the teams and their sub-teams
+    for team in teams:
+        for sub_team in team.sub_teams:
+            team_ids.append(team.team_id)
+            team_class.append(team.team_type)
+            sub_team_ids.append(sub_team.sub_team_id)
+            sub_team_competence.append(sub_team.phase1_competence)
+
+    # Create a dictionary from the lists
+    data = {
+        'Team_ID': team_ids,
+        'Team_Class': team_class,
+        'Sub_Team_ID': sub_team_ids, 
+        'Phase1_Competence': sub_team_competence
+    }
+
+    # Create a DataFrame from the dictionary
+    df = pd.DataFrame(data)
+
+    # Display the DataFrame
+    print(df)
+
+
+
+# defines a function which allocates sub_team(s) to sub_area(s) based on priority weight and competence, works with sub_teams list or single object
+def allocate_sub_team_phase1(sub_areas, sub_teams):
+    # sorts the sub_areas so that the sub_areas with the highest priority weight are first in the list
+    sub_areas = sorted(sub_areas, key=lambda x: (x.priority_weight), reverse=True)
+
+    # links the objects of sub_teams to sub_areas and removes the sub_areas that are allocated from the sub_areas list
+    if hasattr(sub_teams, '__iter__'):
+
+        # sorts the sub_teams so that the sub_teams with the highest competence are first in the list
+        sub_teams = sorted(sub_teams, key=lambda x: (x.phase1_competence), reverse=True)
+        
+        # assigns sub_areas to sub_teams
+        for i, o in enumerate(sub_teams):
+            # filters the sub_areas so that only the sub_areas that haven't been cleared are in the list
+            filtered_sub_areas = [sub_area for sub_area in sub_areas if (sub_area.cleared == False)]
+            # filters the sub_areas so that only the sub_areas that can be served by the sub_team are in the list
+            filtered_sub_areas = [sub_area for sub_area in sub_areas if any((building.damage_state in o.serveable_damage_states and building.cleared == False and building.safe == False) for building in sub_area.buildings)]
+            print('-'*30)
+            # print(f'amount of sub_areas filtered: {len(sub_areas) - len(filtered_sub_areas)}')            
+
+            # Calculate the priority weights for each sub-area only including buildings that are in a damage state that the sub-team can serve
+            DS_priority_weights = []
+            DS_clear_times = []
+            for sub_area in filtered_sub_areas:
+                # Initialize a running total for the new priority weight
+                new_priority_weight = 0
+                new_clear_time = 0
+
+                # Iterate through buildings in the sub_area
+                for building in sub_area.buildings:
+                    if building.damage_state in o.serveable_damage_states and building.cleared == False and building.safe == False:
+                        # Add the building's priority weight to the total
+                        new_priority_weight += (building.priority_weight / building.clear_time)
+                        new_clear_time += building.clear_time
+                DS_priority_weights.append(new_priority_weight)
+                DS_clear_times.append(new_clear_time)
+
+            # Pair each sub-area with its DS priority weight
+            sub_area_priority_pairs = list(zip(filtered_sub_areas, DS_priority_weights, DS_clear_times))
+
+            # Sort the sub-areas based on DS priority weights
+            sorted_sub_areas = [sub_area for sub_area, _, _ in sorted(sub_area_priority_pairs, key=lambda x: x[1], reverse=True)]
+            DS_priority_weights = sorted(DS_priority_weights, key=lambda x: x, reverse=True)
+            DS_clear_times = [DS_clear_time for _, _, DS_clear_time in sorted(sub_area_priority_pairs, key=lambda x: x[1], reverse=True)] 
+            # print(f'sorted_sub_areas: {sorted_sub_areas}')
+            # print(f'DS_priority_weights: {DS_priority_weights}')
+            # print(f'DS_clear_times: {DS_clear_times}')
+
+            # assign the sub_area to the sub_team
+            o.assign_sub_area(sorted_sub_areas[0])
+            print(f'sub_team {o.sub_team_id} assigned to sub_area {o.sub_area}')
+
+            o.rem_time -= DS_clear_times[0]
+            for building in o.sub_area.buildings:
+                if building.damage_state in o.serveable_damage_states and building.cleared == False and building.safe == False:
+                    building.set_cleared()
+                    # print(f'building {building.building_id} cleared')
+                    # print(f'building clear_time: {building.clear_time}')
+            if o.sub_area.cleared == True:
+                sub_areas.remove(o.sub_area)
+
+            print(f'amount of cleared buildings in area: {len([building for building in sub_areas[0].area.buildings if building.cleared == True])}')
+            
+    else:
+        # filters the sub_areas so that only the sub_areas that haven't been cleared are in the list
+        filtered_sub_areas = [sub_area for sub_area in sub_areas if (sub_area.cleared == False)]
+        # filters the sub_areas so that only the sub_areas that can be served by the sub_team are in the list
+        filtered_sub_areas = [sub_area for sub_area in sub_areas if any((building.damage_state in sub_teams.serveable_damage_states and building.cleared == False and building.safe == False) for building in sub_area.buildings)]
+        print('-'*30)
+        # print(f'amount of sub_areas filtered: {len(sub_areas) - len(filtered_sub_areas)}')            
+
+        # Calculate the priority weights for each sub-area only including buildings that are in a damage state that the sub-team can serve
+        DS_priority_weights = []
+        DS_clear_times = []
+        for sub_area in filtered_sub_areas:
+            # Initialize a running total for the new priority weight
+            new_priority_weight = 0
+            new_clear_time = 0
+
+            # Iterate through buildings in the sub_area
+            for building in sub_area.buildings:
+                if building.damage_state in sub_teams.serveable_damage_states and building.cleared == False and building.safe == False:
+                    # Add the building's priority weight to the total
+                    new_priority_weight += (building.priority_weight / building.clear_time)
+                    new_clear_time += building.clear_time
+            DS_priority_weights.append(new_priority_weight)
+            DS_clear_times.append(new_clear_time)
+
+        # Pair each sub-area with its DS priority weight
+        sub_area_priority_pairs = list(zip(filtered_sub_areas, DS_priority_weights, DS_clear_times))
+
+        # Sort the sub-areas based on DS priority weights
+        sorted_sub_areas = [sub_area for sub_area, _, _ in sorted(sub_area_priority_pairs, key=lambda x: x[1], reverse=True)]
+        DS_priority_weights = sorted(DS_priority_weights, key=lambda x: x, reverse=True)
+        DS_clear_times = [DS_clear_time for _, _, DS_clear_time in sorted(sub_area_priority_pairs, key=lambda x: x[1], reverse=True)] 
+        # print(f'sorted_sub_areas: {sorted_sub_areas}')
+        # print(f'DS_priority_weights: {DS_priority_weights}')
+        # print(f'DS_clear_times: {DS_clear_times}')
+
+        # assign the sub_area to the sub_team
+        if sorted_sub_areas != []:
+            sub_teams.assign_sub_area(sorted_sub_areas[0])
+            print(f'sub_team {sub_teams.sub_team_id} assigned to sub_area {sub_teams.sub_area}')
+
+            sub_teams.rem_time -= DS_clear_times[0]
+            for building in sub_teams.sub_area.buildings:
+                if building.damage_state in sub_teams.serveable_damage_states and building.cleared == False and building.safe == False:
+                    building.set_cleared()
+            if sub_teams.sub_area.cleared == True:
+                sub_areas.remove(sub_teams.sub_area)
+            print(f'amount of cleared buildings in area: {len([building for building in sub_areas[0].area.buildings if building.cleared == True])}')
+
+        else:
+            sub_teams.rem_time = 0
+        # sub_teams.assign_sub_area(sub_areas.pop(0))
+        # sub_teams.rem_time -= sub_teams.sub_area.clear_time
+        # sub_teams.sub_area.cleared = True
+    return sub_areas
+
+
+
+def allocate_sub_team_phase2(sub_areas, sub_teams):
+    # allocation of sub_teams in an area to sub_areas phase 2
+    total_action_count_list = []
+    
+    for s in sub_teams:
+        # filters the sub_areas so that only the sub_areas that haven't been cleared are in the list
+        filtered_sub_areas = [sub_area for sub_area in sub_areas if (sub_area.cleared == False)]
+        # filters the sub_areas so that only the sub_areas that can be served by the sub_team are in the list
+        filtered_sub_areas = [sub_area for sub_area in sub_areas if any((building.damage_state in s.serveable_damage_states and building.cleared == False and building.safe == False) for building in sub_area.buildings)]
+        
+        # print('-'*30)
+        # print(f'amount of sub_areas filtered: {len(sub_areas) - len(filtered_sub_areas)}') 
+        
+        # create empty dictionary to store the serveable sub_areas and their priority weights
+        serveable_sub_areas = {}
+        serveable_buildings = {}
+        # sub_areas_priorities = []
+        # print(f'sub_team.action_counts: {s.action_counts}')
+        # filter the sub_areas list to only include sub_areas that have not been cleared and that have required actions that the sub_team can perform
+        for sa in filtered_sub_areas:
+            # check if the sub_team has the available actions required to clear the sub_area
+            if (all(required_action in s.action_counts for required_action in sa.required_actions)) and (sa.cleared == False):
+                # create priority weights for each sub_area based on the criteria and how well the required actions match the available actions
+                # adding up all the counts of people who can perform each required action
+                total_action_count = 0
+                for required_action in sa.required_actions:
+                    total_action_count += s.action_counts[required_action]
+                
+                # creating a factor based on the total_action_count, to multiply the estimated time with
+                sub_team_efficiency = 1.5 * (1 - math.exp(- (0.0193 * total_action_count))) + 0.5
+
+                # Initialize a running total for the new priority weight
+                new_priority_weight = 0
+                new_clear_time = 0
+
+                
+                # Iterate through buildings in the sub_area
+                for building in sa.buildings:
+                    if building.damage_state in s.serveable_damage_states and building.cleared == False and building.safe == False:
+                        # Add the building's priority weight to the total
+                        new_priority_weight += (building.priority_weight / building.clear_time)
+                        new_clear_time += building.clear_time
+                        factored_building_priority_weight = (building.priority_weight / building.clear_time) * sub_team_efficiency
+                        serveable_buildings[building] = factored_building_priority_weight
+
+                DS_priority_weight = new_priority_weight
+                
+                # creating the factored priority weight
+                factored_priority_weight = DS_priority_weight * sub_team_efficiency
+                serveable_sub_areas[sa] = factored_priority_weight
+                
+
+                total_action_count_list.append(total_action_count)
+
+                # print('sub_team_actions:', s.action_counts.keys())
+                # print('sub_area_req_actions:', sa.required_actions)
+                # print('total_action_count:', total_action_count)
+                # print('clear_time:', sa.clear_time)
+                # print('priority_weight:', sa.priority_weight)
+                # print('sum_building_weights:', sa.clear_time * sa.priority_weight)
+                # print('sub_team_efficiency:', sub_team_efficiency)
+                # print('factored_clear_time:', sa.priority_weight / sub_team_efficiency)
+                # print('factored_priority_weight:', factored_priority_weight)
+        
+        serveable_sub_areas = sorted(serveable_sub_areas.items(), key=lambda x: (x[1]), reverse=True)
+        s.serveable_sub_areas = serveable_sub_areas
+        s.serveable_buildings = serveable_buildings
+        # print(f'serveable_sub_areas: {serveable_sub_areas}')
+
+    if len(sub_teams) > 1:
+        # slice the serveable_sub_areas dictionary to the amount of subteams in the area
+        sliced_sub_areas = [dict(itertools.islice(o.serveable_sub_areas, len(sub_teams))) for o in sub_teams]
+        # print('sliced_sub_areas:', sliced_sub_areas)
+        
+        # create the option for no sub_area to be assigned to a sub_team
+        for i, sub_area_list in enumerate(sliced_sub_areas):
+            sub_area_list[None] = 0
+
+        # Create an empty list to store all combinations
+        all_combinations = []
+
+        # Calculate the Cartesian product of serveable sub-areas for each sub-team
+        for combination in itertools.product(*sliced_sub_areas):
+            # append combination to all_combinations, 'combination' is a list sub_area objects
+            all_combinations.append(combination)
+        # print(all_combinations)
+        # Filter any combinations that contain duplicate sub-areas
+        filtered_combinations = list(filter(lambda x: len(list([sub_area for sub_area in x if sub_area != None])) <= len(set(sub_area for sub_area in x)), all_combinations))
+        print('amount of combinations:', len(all_combinations),
+            '\namount of combinations after filtering:', len(filtered_combinations))
+        # print('filtered_combinations:', filtered_combinations)
+        
+        # Associating the sub_area objects with their priority weights and finding the highest priority combination
+        best_combination_score = 0
+        best_combination = None
+
+        for i, combination in enumerate(filtered_combinations):
+            combination_score = 0
+            # print(f"Combination {i}:")
+            for j, sub_area in enumerate(combination):
+                priority = sliced_sub_areas[j][sub_area] # Access the sub-area object and priority
+                # print(f"Sub-area: {sub_area}, Priority: {priority}")
+                combination_score += priority
+            # print(f"Combination score: {combination_score}")
+            if combination_score >= best_combination_score:
+                best_combination_score = combination_score
+                best_combination = combination
+
+        # Getting priority weights for the best combination
+        print(f"Best combination score: {best_combination_score}")
+        for i, sub_area in enumerate(best_combination):
+                priority = sliced_sub_areas[i][sub_area] # Access the sub-area object and priority
+                print(f"Sub-area: {sub_area}, Priority: {priority}")
+                if sub_area != None:
+                    sub_teams[i].assign_sub_area(sub_area)
+                    sub_teams[i].sub_area_priority = priority
+                    for building in sub_teams[i].sub_area.buildings:
+                        if building.damage_state in sub_teams[i].serveable_damage_states and building.cleared == False and building.safe == False:
+                            building.set_cleared()
+                else:
+                    sub_teams[i].assign_sub_area(None)
+                    sub_teams[i].sub_area_priority = 0
+    else:
+        # Assign sub_teams to sub_areas
+        sub_teams[0].assign_sub_area(sub_teams[0].serveable_sub_areas[0][0])
+        sub_teams[0].sub_area_priority = sub_teams[0].serveable_sub_areas[0][1]
+        for building in sub_teams[0].sub_area.buildings:
+            if building.damage_state in sub_teams[0].serveable_damage_states and building.cleared == False and building.safe == False:
+                building.set_cleared()
 
 
 
@@ -631,3 +1327,681 @@ def generate_building_sequences(buildings: list[dict], n: int) -> list[list[dict
 
 
 
+def convert_to_dict(sub_area, sub_team):
+    # Convert the building data into a list of dictionaries
+    sub_area = sub_area
+    sub_team = sub_team
+    buildings = []
+    for i, b in enumerate(sub_area.buildings):
+        building = {
+            'Building_Id': sub_area.buildings.index(b),
+            'Damage_State': int(re.search(r'\d+', b.damage_state).group()),
+            'Building_Height': b.stories,
+            'Building_Area': int(b.footprint),
+            'Injury_Severity': [int(i) for i in b.injuries[1:]],
+        }
+        buildings.append(building)
+    return buildings
+
+
+
+def show_person_rescue_duration(sub_team, buildings):
+    # Calculate the duration of to save one life for each building and create a dictionary for it
+    Rescue_duration = Rescue_Duration(buildings, sub_team)
+    # print(Rescue_duration)
+
+    # extract the values from the dictionary
+    building_ids = list(Rescue_duration.keys())
+    rescue_durations = list(Rescue_duration.values())
+
+    # change aspect ratio of the plot
+    plt.figure(figsize=(7, 4))
+
+    # create a bar chart of building vs rescue duration
+    plt.bar(building_ids, rescue_durations, color='grey')
+
+    # show all building ids on the x-axis
+    # plt.xticks(building_ids)
+
+    # label the axes
+    plt.ylabel('Rescue Duration as a team of 2 (in minutes)')
+    # plt.xlabel('Building IDs')
+    plt.title('Rescue Duration per person for each building')
+
+    plt.show()
+    
+    return Rescue_duration
+    
+
+
+# a function that calculates the total rescue time for a given sequence of buildings
+def analyse_sequences(sequences, Rescue_duration):
+    # Initialize best scores, sequences, total rescue, and total rescue time variables
+    best_scores = []
+    best_sequences = []
+    total_rescue = []
+    total_rescue_time = []  # Initialize as an empty list
+
+    # Run the simulations using the generated sequences
+    for sequence in sequences:
+        current_time = 0    # Reset the current_time for each sequence
+        sequence_scores = 0    # Reset the score for each sequence
+        sequence_building_data = []
+
+        # Initialize variables to store cumulative results for all injury classes
+        all_initial_people_counts = []
+        all_people_alive = []
+        all_total_rescued = 0
+        all_total_rescue_time = 0
+
+        for building in sequence:
+            initial_people_counts, people_alive, total_rescued, rescue_time, current_time = calculate_rescue_time(building,
+                                                                                                                        current_time,
+                                                                                                                        Rescue_duration=Rescue_duration,
+                                                                                                                        buffer_time=20)
+            # Accumulate results for all injury classes
+            all_initial_people_counts.append(initial_people_counts)
+            all_people_alive.append(people_alive)
+            all_total_rescued += total_rescued
+            all_total_rescue_time += rescue_time
+
+            # Calculate the score for the building and add it to the sequence_scores
+            building_score = calculate_score(initial_people_counts, people_alive)
+            sequence_scores += building_score
+
+            # Append building data for the sequence
+            sequence_building_data.append({
+                "Building_ID": building["Building_Id"],
+                "Initial_People_Count": initial_people_counts,
+                "People_Alive": people_alive,
+                "Total_Rescued": total_rescued,
+                "Total_Rescue_Time": rescue_time
+            })
+
+        # Add the sequence and its score to the list of best sequences
+        best_scores.append(sequence_scores)
+        best_sequences.append(sequence_building_data)
+        total_rescue.append(all_total_rescued)
+        total_rescue_time.append(all_total_rescue_time)
+
+    # Sort the sequences and scores based on scores (in descending order)
+    sorted_data = sorted(zip(best_sequences, best_scores), key=lambda x: x[1], reverse=True)
+
+    # Print the top 5 sequences and their scores, total rescue, and total rescue time
+    top_5_sequences = sorted_data[:5]
+
+    for i, (sequence, score) in enumerate(top_5_sequences, start=1):
+        print(f"Top {i} Sequence Score: {score}")
+        print(f"Total Rescued: {total_rescue[i - 1]}")
+        print(f"Total Rescue Time: {total_rescue_time[i - 1]}")  # Access the corresponding total rescue time
+    #     print("Sequence:")
+
+        for building_data in sequence:
+            print(f"  Building ID: {building_data['Building_ID']}")
+            print(f"  Initial People Count: {building_data['Initial_People_Count']}")
+            print(f"  Rescue distribution: {building_data['People_Alive']}")
+            print(f"  Total Rescued: {building_data['Total_Rescued']}")
+            print(f"  Total Rescue Time (in minutes): {building_data['Total_Rescue_Time']}")
+            print('-' * 20)
+
+        print('-' * 40)
+        
+    return top_5_sequences
+
+
+
+def show_schedule(top_5_sequences):    
+    # Initialize a dictionary to keep track of building labels and their colors
+    building_colors = {}
+    legend_labels = {}
+
+    # Create a Gantt chart for each of the top 5 sequences
+    for i, (sequence, _) in enumerate(top_5_sequences, start=1):
+        plt.figure(figsize=(12, 5))
+        plt.title(f"Top {i} Sequence")
+
+        current_time = 0  # Initialize current time in minutes
+        for j, building_data in enumerate(sequence):
+            building_id = building_data['Building_ID']
+            initial_people_count = building_data['Initial_People_Count']
+            rescue_time = building_data['Total_Rescue_Time']
+
+            if building_id not in building_colors:
+                # Generate a random color for each building
+                building_colors[building_id] = "#" + ''.join([random.choice('0123456789ABCDEF') for j in range(6)])
+
+            if building_id not in legend_labels:
+                legend_labels[building_id] = f"Building {building_id}"
+
+            # Plot the Gantt bar for each building with its unique color
+            plt.barh(building_id, rescue_time, left=current_time, label=legend_labels[building_id], color=building_colors[building_id])
+
+            # Update current time for the next building
+            current_time += rescue_time
+
+        # Customize the x-axis to display building IDs
+        plt.yticks(list(legend_labels.keys()), list(legend_labels.values()))
+
+        # Customize the y-axis to display time in hours
+        plt.ylabel("Building ID")
+        
+        # Customize the x-axis to display time in hours
+        plt.xlabel("Time (hours)")
+        x_ticks = [i * 60 for i in range(int(current_time / 60) + 1)]  # Convert to hours (1 hour = 60 minutes)
+        x_labels = [str(int(t / 60)) for t in x_ticks]
+        plt.xticks(x_ticks, x_labels)
+
+        # Show the Gantt chart
+        plt.grid(True)
+
+    # Create a common legend for all sequences at the end and position it outside
+    legend_labels_list = list(legend_labels.values())
+    # plt.legend(legend_labels_list, loc='upper left', bbox_to_anchor=(1, 1))
+    plt.show()
+  
+    
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_all_geometry(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    for a in areas:
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')
+
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+        
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # plot the sub_area geometry        
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            c = 'black'
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    fig.savefig('images/all_geometry.png', dpi=300)
+    plt.show()
+    # print(f'safe_count: {safe_count}')
+    
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_cleared_buildings(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # create legend
+    legend_elements = [
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize='10', label='cleared'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize='10', label='safe'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize='10', label='not cleared'),
+    ]
+
+    # add legend to graph
+    ax.legend(handles=legend_elements, loc='upper right')
+
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    for a in areas:
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+        
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # plot the sub_area geometry        
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            if a.buildings[i].cleared == True:
+                c = '#133046'
+            elif a.buildings[i].safe == True:
+                c = '#15959F'
+            else:
+                c = '#D3D3D3'
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    fig.savefig('images/buildings_cleared.png', dpi=300)
+    plt.show()
+    # print(f'safe_count: {safe_count}')
+
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_cleared_by(areas, sub_teams):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots(dpi=100)
+    ax.set_aspect('equal')
+
+    # create legend
+    marker_size = '6'
+    if len(sub_teams) > 0:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not cleared'),
+        ]
+    if len(sub_teams) > 1:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not cleared'),
+        ]
+    if len(sub_teams) > 2:        
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not cleared'),
+        ]
+    if len(sub_teams) > 3:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize=marker_size, label='sub_team: '+str(sub_teams[3].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not cleared'),
+        ]
+    if len(sub_teams) > 4:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize=marker_size, label='sub_team: '+str(sub_teams[3].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize=marker_size, label='sub_team: '+str(sub_teams[4].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not cleared'),
+        ]
+
+    # add legend to graph
+    legend = ax.legend(handles=legend_elements, loc='upper right')
+    for label in legend.get_texts():
+        label.set_fontsize(6)
+    # ax.legend(handles=legend_elements, loc='upper right')
+
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # plot the sub_area geometry        
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            # if a.buildings[i].cleared_by != None:
+                # print(a.buildings[i].cleared_by, i)
+            
+            c = '#D3D3D3'
+            if len(sub_teams) > 0 and a.buildings[i].cleared_by != None:
+                if a.buildings[i].cleared_by.sub_team_id == sub_teams[0].sub_team_id:
+                    c = '#133046'
+            if len(sub_teams) > 1 and a.buildings[i].cleared_by != None:
+                if a.buildings[i].cleared_by.sub_team_id == sub_teams[1].sub_team_id:
+                    c = '#15959F'
+            if len(sub_teams) > 2 and a.buildings[i].cleared_by != None:
+                if a.buildings[i].cleared_by.sub_team_id == sub_teams[2].sub_team_id:
+                    c = '#F1E4B3'
+            if len(sub_teams) > 3 and a.buildings[i].cleared_by != None:
+                if a.buildings[i].cleared_by.sub_team_id == sub_teams[3].sub_team_id:
+                    c = '#EC9770'
+            if len(sub_teams) > 4 and a.buildings[i].cleared_by != None:
+                if a.buildings[i].cleared_by.sub_team_id == sub_teams[4].sub_team_id:
+                    c = '#C7402D'
+
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    fig.savefig('images/buildings_cleared_by_sub_team.png', dpi=300)
+    plt.show()
+    # print(f'safe_count: {safe_count}')
+
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_damage_states_buildings(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # create legend
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D'
+    legend_elements = [
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize='10', label='DS2'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize='10', label='DS3'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize='10', label='DS4'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize='10', label='DS5')
+    ]
+
+    # add legend to graph
+    ax.legend(handles=legend_elements, loc='upper right')
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')        
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")        
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # plot the sub_area geometry        
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            if a.buildings[i].damage_state == 'DS2':
+                c = '#133046'
+            elif a.buildings[i].damage_state == 'DS3':
+                c = '#15959F'
+            elif a.buildings[i].damage_state == 'DS4':
+                c = '#F1E4B3'
+            else:
+                c = '#C7402D'
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    fig.savefig('images/damage_states.png', dpi=300)
+    plt.show()
+  
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_structural_system_buildings(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # create legend
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    legend_fig, legend_ax = plt.subplots()
+    legend_elements = [
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize='10', label='Concrete Frame, Infill Panels'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize='10', label='Concrete Frame, Structural Infill'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize='10', label='Concrete Walls'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize='10', label='Unreinforced Masonry'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize='10', label='Timber'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#FFC107', markersize='10', label='Steel'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#FFA726', markersize='10', label='Construction Site'),
+    ]
+
+    # add legend to graph
+    legend_ax.legend(handles=legend_elements, loc='upper right')
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')              
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")        
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # plot the sub_area geometry        
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            if a.buildings[i].building_typology == 'Concrete Frame, Infill Panels':
+                c = '#133046'
+            elif a.buildings[i].building_typology == 'Concrete Frame, Structural Infill':
+                c = '#F1E4B3'
+            elif a.buildings[i].building_typology == 'Concrete Walls':
+                c = '#15959F'
+            elif a.buildings[i].building_typology == 'Unreinforced Masonry':
+                c = '#EC9770'                
+            elif a.buildings[i].building_typology == 'Timber':
+                c = '#C7402D'       
+            elif a.buildings[i].building_typology == 'Steel':
+                c = '#FFC107'  
+            elif a.buildings[i].building_typology == 'Construction Site':
+                c = '#FFA726'                                                 
+            else:
+                c = '#D3D3D3'
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    ax.axis('off')    
+    fig.savefig('images/structural_systems.png', dpi=300)
+    legend_fig.savefig('images/structural_systems_legend.png', dpi=300)
+    plt.show()
+
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_occupancy_type_buildings(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # create legend
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    legend_fig, legend_ax = plt.subplots()
+    legend_elements = [
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize='10', label='residential'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize='10', label='commercial'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize='10', label='industrial'),
+    ]
+
+    # add legend to graph
+    legend_ax.legend(handles=legend_elements, loc='upper right')
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')           
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")        
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # plot the sub_area geometry        
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            if a.buildings[i].occupancy_type == 'residential':
+                c = '#133046'
+            elif a.buildings[i].occupancy_type == 'commercial':
+                c = '#15959F'
+            elif a.buildings[i].occupancy_type == 'industrial':
+                c = '#F1E4B3'                                               
+            else:
+                c = '#D3D3D3'
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    ax.axis('off')    
+    fig.savefig('images/occupancy_type.png', dpi=300)
+    legend_fig.savefig('images/occupancy_type_legend.png', dpi=300)
+    plt.show()
+
+
+
+# Define a function which plots the geometry of the areas, sub-areas, and buildings
+def show_population_night_buildings(areas):
+    # Create an empty figure and axes
+    fig, ax = plt.subplots()
+
+    # Create a legend figure and axes
+    # legend_fig, legend_ax = plt.subplots()
+
+    # Define a color map for the population gradient
+    cmap = LinearSegmentedColormap.from_list("population", ['#15959F', '#EC9770', '#C7402D'], N=256)
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')      
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # Plot the sub-area geometry
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha=0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+
+        # Plot the building geometry with population gradient
+        populations = [building.population_night for building in a.buildings]
+        norm = plt.Normalize(min(populations), max(populations))
+        colors = cmap(norm(populations))
+        
+        for i, building in enumerate(a.buildings):
+            x, y = building.geometry.exterior.xy
+            ax.fill(x, y, color=colors[i])
+
+    # Create a colorbar for the population gradient
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, label='Population')
+
+    # Customize the plot
+    ax.set_aspect('equal')
+    ax.axis('off')
+
+    # Save the figure with a higher resolution
+    fig.savefig('images/population_night.png', dpi=300)
+
+    # Display the plot
+    plt.show()
+
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_priority_score_buildings(areas, sub_team):
+    # Create an empty figure and axes
+    fig, ax = plt.subplots()
+
+    # Create a legend figure and axes
+    # legend_fig, legend_ax = plt.subplots()
+
+    # Define a color map for the population gradient
+    cmap = LinearSegmentedColormap.from_list('Priority score for sub_team '+str(sub_team.sub_team_id), ['#15959F', '#EC9770', '#C7402D'], N=256)
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')            
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # Plot the sub-area geometry
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha=0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+
+        # Plot the building geometry with population gradient
+        priority_scores = list(sub_team.serveable_buildings.values())
+        norm = plt.Normalize(min(priority_scores), max(priority_scores))
+        
+        for i, building in enumerate(a.buildings):
+            x, y = building.geometry.exterior.xy
+            if building in sub_team.serveable_buildings.keys():
+                colors = cmap(norm(sub_team.serveable_buildings[building]))
+            else:
+                colors = '#D3D3D3'
+            ax.fill(x, y, color=colors)
+
+    # Create a colorbar for the population gradient
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, label='Factored priority score for sub_team '+str(sub_team.sub_team_id))
+
+    # Customize the plot
+    ax.set_aspect('equal')
+    ax.axis('off')
+
+    # Save the figure with a higher resolution
+    fig.savefig('images/priority_score.png', dpi=300)
+
+    # Display the plot
+    plt.show()

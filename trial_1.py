@@ -271,7 +271,7 @@ class Building:
         sev_rating = cls._calculate_sev_rating(building.injuries[1:])
         trp_rating = cls._calculate_trp_rating(building.occupancy, building.sub_area.average_occupancy)
 
-        print(ds_rating, rl_rating, sev_rating, trp_rating)
+        # print(ds_rating, rl_rating, sev_rating, trp_rating)
         building.priority_weight = round(cls._priority_rating(ds_rating, rl_rating, sev_rating, trp_rating),4)
 
         return building.priority_weight
