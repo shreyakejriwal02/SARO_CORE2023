@@ -10,8 +10,24 @@ In the aftermath of natural disasters like earthquakes, the efficient management
 ### PyPI
 Install relevant libraries:
 ```
-pip install numpy as np
+pip install numpy
+pip install pandas
+pip install matplotlib
+pip install shapely
+pip install osmnx
+pip install geopandas
+pip install scipy
 ```
+
+Uses for different libraries:
+1. math
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import random
+from shapely.geometry import Polygon
+import pandas as pd
+import re
 ## Input data
 
 ## Usage
