@@ -17,7 +17,7 @@ Make sure you have the following Python libraries installed:
 - random
 - shapely
 
-Read below to install the libraries.
+Read below to install the libraries if they are missing.
 
 ### PyPI
 Install relevant libraries:
@@ -30,13 +30,25 @@ pip install osmnx
 pip install geopandas
 pip install scipy
 ```
+## Usage
+Step 1: Clone the repository
+
+Step 2: Navigate to the Project Directory to find trial_1.py and functions.py
+
+Step 3: Install all the relevant dependencies
+
+Step 4: Run clean_program.ipynb
 
 ## Input data
 
-## Usage
 
 ## Key Features
 
 ## Known issues
 
 ## Credits
+Bo Valkenburg, Brent Smeekes, Pavan Sathyamurthy, Shreya Kejriwal
+The project is a part of a master's quarter project at TU Delft, The Netherlands
+Course Name: CORE (COmputational REpertoire for Architectural Design and Engineering)
+
+Feel free to contribute, report issues, or provide feedback!
