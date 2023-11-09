@@ -7,6 +7,18 @@ In the aftermath of natural disasters like earthquakes, the efficient management
 > "Minimize loss of life, alleviate suffering and prevent harm by more efficiently locating, rescuing and providing aid to individuals affected by the disaster."
 
 ## Installation (Libraries, packages and softwares)
+### Dependencies
+Make sure you have the following Python libraries installed:
+
+- math
+- numpy
+- pandas
+- matplotlib
+- random
+- shapely
+
+Read below to install the libraries.
+
 ### PyPI
 Install relevant libraries:
 ```
@@ -19,15 +31,6 @@ pip install geopandas
 pip install scipy
 ```
 
-Uses for different libraries:
-1. math
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import random
-from shapely.geometry import Polygon
-import pandas as pd
-import re
 ## Input data
 
 ## Usage
