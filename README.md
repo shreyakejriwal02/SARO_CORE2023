@@ -1,13 +1,15 @@
-# SARO Overview
+# Search and Research Optimization (SARO)
 
-# Table of content
+## Overview
 
-# Installation
+## Installation (Libraries, packages and softwares)
 
-# Usage
+## Input data
 
-# Key Features
+## Usage
 
-# Known issues
+## Key Features
 
-# Credits
+## Known issues
+
+## Credits
