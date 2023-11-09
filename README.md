@@ -49,7 +49,7 @@ Step 4: Run clean_program.ipynb
 ## Credits
 Bo Valkenburg, Brent Smeekes, Pavan Sathyamurthy, Shreya Kejriwal.
 
-The project is a part of a master's quarter project at TU Delft, The Netherlands
+The project is part of a master's quarter project at TU Delft, The Netherlands
 Course Name: CORE (COmputational REpertoire for Architectural Design and Engineering)
 
 Feel free to contribute, report issues, or provide feedback!
