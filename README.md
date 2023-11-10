@@ -32,11 +32,8 @@ pip install scipy
 ```
 ## Usage
 Step 1: Clone the repository
-
 Step 2: Navigate to the Project Directory to find trial_1.py and functions.py
-
 Step 3: Install all the relevant dependencies
-
 Step 4: Run clean_program.ipynb
 
 ## Input data
@@ -44,7 +41,14 @@ Step 4: Run clean_program.ipynb
 
 ## Key Features
 
+
+## Data Processing
+
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/d84bc3c2-3d92-476f-a66d-75d7c14e70f9)
+
+
 ## Known issues
+
 
 ## Credits
 Bo Valkenburg, Brent Smeekes, Pavan Sathyamurthy, Shreya Kejriwal.
