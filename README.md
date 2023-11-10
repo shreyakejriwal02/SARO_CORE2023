@@ -43,8 +43,11 @@ Step 4: Run clean_program.ipynb
 
 
 ## Data Processing
-
+1- The first step is to check the dependencies and install all the relevant libraries as shown in requirements.txt
+1- Input the address of the desired 
 ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/d84bc3c2-3d92-476f-a66d-75d7c14e70f9)
+
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/7611564b-f6ff-4600-b3f2-815a5007a298)
 
 
 ## Known issues
