@@ -191,13 +191,13 @@ class Sub_Area:
         self.sub_team = None
         self.cleared = False
 
-        # create a list of random required actions
-        action_lists = competency_action_dict.values()
-        actions = []
-        for action_list in action_lists:
-            for action in action_list:
-                actions.append(action)
-        self.required_actions = random.sample(actions, random.randint(1, 5))
+        # # create a list of random required actions
+        # action_lists = competency_action_dict.values()
+        # actions = []
+        # for action_list in action_lists:
+        #     for action in action_list:
+        #         actions.append(action)
+        self.required_actions = []
         self.clear_time = None
 
     def add_building(self, building):
@@ -206,6 +206,8 @@ class Sub_Area:
         self._update_priority_weight()
         self.average_occupancy = self._calculate_average_occupancy()
         self.clear_time = np.sum([o.clear_time for o in self.buildings])
+        if building.actions != []:
+            self.required_actions.extend(building.actions)
         
     def crop_geometry(self):
         self.geometry = self.geometry.intersection(self.area.geometry)
@@ -221,7 +223,7 @@ class Sub_Area:
         return 0.0
 
 class Building:
-    def __init__(self, building_id, geometry, center_point, occupancy_type, footprint, structural_system, lateral_resistance, stories, population_day, population_night, damage_state_probabilities, injuries):
+    def __init__(self, building_id, geometry, center_point, occupancy_type, footprint, structural_system, lateral_resistance, stories, population_day, population_night, code_compliance, damage_state_probabilities, injuries):
         self.building_id = building_id    # from GIS data
         self.geometry = geometry   # from GIS data
         self.center_point = center_point
@@ -232,6 +234,7 @@ class Building:
         self.stories = stories
         self.population_day = population_day
         self.population_night = population_night
+        self.code_compliance = code_compliance
         self.damage_state_probabilities = damage_state_probabilities
         self.injuries = list(injuries)
         self.occupancy = sum(injuries)
@@ -239,12 +242,14 @@ class Building:
         self.building_typology = None
         self.damage_state = damage_states[self.damage_state_probabilities.index(max(self.damage_state_probabilities))]
         self.set_typology()
+        
         if stories <4:
             self.height_code = 'HBET:1-3'
         elif stories <7:
             self.height_code = 'HBET:4-6'
         elif stories >6:
             self.height_code = 'HBET:7-'
+            
         self.actions = self.get_action_codes()
         if self.actions == []:
             self.safe = True

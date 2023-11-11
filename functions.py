@@ -491,10 +491,11 @@ def import_buildings(area, earthquake):
         stories = partA_data.loc[i, 'height']
         population_day = partA_data.loc[i, 'population day']
         population_night = partA_data.loc[i, 'population night']
+        code_compliance = partA_data.loc[i, 'code_compliance']
         damage_state_probabilities = [partA_data.loc[i, 'p_ds2'], partA_data.loc[i, 'p_ds3'], partA_data.loc[i, 'p_ds4'], partA_data.loc[i, 'p_ds5']]
         injuries = partA_data.loc[i, 'injuries']
 
-        bld = Building(id, geo, center_point, occupancy_type, footprint, structural_system, lateral_resistance, stories, population_day, population_night, damage_state_probabilities, injuries)
+        bld = Building(id, geo, center_point, occupancy_type, footprint, structural_system, lateral_resistance, stories, population_day, population_night, code_compliance, damage_state_probabilities, injuries)
         bld_lst.append(bld)
         area.add_building(bld)
 
@@ -518,6 +519,7 @@ def generate_sub_areas(area, buildings, x_steps, y_steps):
     rows = list(np.arange(ymin, ymax + height, height))
 
     # sort the list of buildings objects based on x coordinates, then y coordinates
+    # this code allows the buildings to get assigned to a sub_area by checking their coordinates once as opposed to for every cell.
     sorted_blds = sorted(buildings, key=lambda x: (x.center_point.x, x.center_point.y))
 
     # create cells and plot to graph, add buildings to subarea classes
@@ -1367,7 +1369,7 @@ def show_person_rescue_duration(sub_team, buildings):
     plt.ylabel('Rescue Duration as a team of 2 (in minutes)')
     # plt.xlabel('Building IDs')
     plt.title('Rescue Duration per person for each building')
-
+    plt.savefig('images/rescue_duration_person.png', dpi=300)
     plt.show()
     
     return Rescue_duration
@@ -1496,11 +1498,12 @@ def show_schedule(top_5_sequences):
 
     # Create a common legend for all sequences at the end and position it outside
     legend_labels_list = list(legend_labels.values())
+    plt.savefig('images/building_schedule.png', dpi=300)
     # plt.legend(legend_labels_list, loc='upper left', bbox_to_anchor=(1, 1))
     plt.show()
   
     
-
+    
 # defines a function which plots the geometry of the areas, sub_areas and buildings
 def show_all_geometry(areas):
     # create empty graph and plot sub_area geometry to graph
@@ -1540,6 +1543,132 @@ def show_all_geometry(areas):
     plt.show()
     # print(f'safe_count: {safe_count}')
     
+    
+    
+    # defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_all_areas(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    for a in areas:
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')
+
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+        
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    fig.savefig('images/all_areas.png', dpi=300)
+    plt.show()
+    # print(f'safe_count: {safe_count}')
+    
+    
+
+    # defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_all_sub_areas(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    for a in areas:
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')
+
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+        
+        # plot the sub_area geometry        
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', linewidth=0.75)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    fig.savefig('images/all_sub_areas.png', dpi=300)
+    plt.show()
+    # print(f'safe_count: {safe_count}')
+    
+    
+
+def show_all_buildings(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    for a in areas:
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')
+
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            c = 'black'
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    plt.savefig('images/all_buildings.png', dpi=300)
+    plt.show()
+    # print(f'safe_count: {safe_count}')
+
+
+
+def show_all_areas_and_buildings(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    for a in areas:
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')
+
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+        
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # # plot the sub_area geometry        
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            c = 'black'
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    plt.savefig('images/all_areas_and_buildings.png', dpi=300)
+    plt.show()
+    # print(f'safe_count: {safe_count}')
+
 
 
 # defines a function which plots the geometry of the areas, sub_areas and buildings
@@ -1602,7 +1731,7 @@ def show_cleared_buildings(areas):
 def show_cleared_by(areas, sub_teams):
     # create empty graph and plot sub_area geometry to graph
     fig, ax = plt.subplots(dpi=100)
-    ax.set_aspect('equal')
+    legend_fig, legend_ax = plt.subplots()
 
     # create legend
     marker_size = '6'
@@ -1699,36 +1828,80 @@ def show_cleared_by(areas, sub_teams):
     # ax.set_aspect('equal')
     plt.axis('off')
     fig.savefig('images/buildings_cleared_by_sub_team.png', dpi=300)
+    legend_fig.savefig('images/buildings_cleared_by_legend.png', dpi=300)
     plt.show()
     # print(f'safe_count: {safe_count}')
 
 
 
-# defines a function which plots the geometry of the areas, sub_areas and buildings
-def show_damage_states_buildings(areas):
+def show_allocated_to(areas, sub_teams):
     # create empty graph and plot sub_area geometry to graph
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(dpi=100)
+    legend_fig, legend_ax = plt.subplots()
 
     # create legend
-    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D'
-    legend_elements = [
-    Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize='10', label='DS2'),
-    Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize='10', label='DS3'),
-    Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize='10', label='DS4'),
-    Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize='10', label='DS5')
-    ]
+    marker_size = '6'
+    if len(sub_teams) > 0:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 1:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 2:        
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 3:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize=marker_size, label='sub_team: '+str(sub_teams[3].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 4:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize=marker_size, label='sub_team: '+str(sub_teams[3].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize=marker_size, label='sub_team: '+str(sub_teams[4].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 5:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize=marker_size, label='sub_team: '+str(sub_teams[3].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize=marker_size, label='sub_team: '+str(sub_teams[4].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#E89541', markersize=marker_size, label='sub_team: '+str(sub_teams[5].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
 
     # add legend to graph
-    ax.legend(handles=legend_elements, loc='upper right')
+    legend = legend_ax.legend(handles=legend_elements, loc='upper right')
+    for label in legend.get_texts():
+        label.set_fontsize(6)
+    # ax.legend(handles=legend_elements, loc='upper right')
 
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
     for a in areas:
         # Plot the network in the area
         network = ox.graph_from_polygon(a.geometry, network_type='all')
         nodes, edges = ox.graph_to_gdfs(network)
-        network_gdf = edges.to_crs('EPSG:4326')        
+        network_gdf = edges.to_crs('EPSG:4326')
         
         # Plot the network in the area
-        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")        
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
 
         # Plot the area exterior boundary
         x, y = a.geometry.exterior.xy
@@ -1744,12 +1917,230 @@ def show_damage_states_buildings(areas):
 
         # for every geometry choose a colour, fill the geometry and plot to graph
         for i, g in enumerate(geos):
+            # if a.buildings[i].cleared_by != None:
+                # print(a.buildings[i].cleared_by, i)
+            
+            c = '#D3D3D3'
+            if a.buildings[i].cleared_by == sub_teams[0]:
+                c = '#133046'
+            if a.buildings[i].cleared_by == sub_teams[1]:
+                c = '#15959F'         
+            if a.buildings[i].cleared_by == sub_teams[2]:
+                c = '#F1E4B3'
+            if a.buildings[i].cleared_by == sub_teams[3]:
+                c = '#EC9770'
+            if a.buildings[i].cleared_by == sub_teams[4]:
+                c = '#E89541'
+            if a.buildings[i].cleared_by == sub_teams[5]:
+                c = '#C7402D'                                                                
+
+            # if len(sub_teams) > 1 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[1].sub_team_id:
+            #         c = '#15959F'
+            # if len(sub_teams) > 2 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[2].sub_team_id:
+            #         c = '#F1E4B3'
+            # if len(sub_teams) > 3 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[3].sub_team_id:
+            #         c = '#EC9770'
+            # if len(sub_teams) > 4 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[4].sub_team_id:
+            #         c = '#E89541'
+            # if len(sub_teams) > 5 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[5].sub_team_id:
+            #         c = '#C7402D'
+
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    ax.axis('off')
+    legend_ax.axis('off')
+    fig.savefig('images/allocated_to.png', dpi=300)
+    legend_fig.savefig('images/allocated_to_legend.png', dpi=300)
+    plt.show()
+    # print(f'safe_count: {safe_count}')
+
+
+
+def show_allocated_to_p2(areas, sub_teams):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots(dpi=100)
+    legend_fig, legend_ax = plt.subplots()
+
+    # create legend
+    marker_size = '6'
+    if len(sub_teams) > 0:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 1:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 2:        
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 3:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize=marker_size, label='sub_team: '+str(sub_teams[3].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 4:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize=marker_size, label='sub_team: '+str(sub_teams[3].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize=marker_size, label='sub_team: '+str(sub_teams[4].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+    if len(sub_teams) > 5:
+        legend_elements = [
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize=marker_size, label='sub_team: '+str(sub_teams[0].sub_team_id)),        
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize=marker_size, label='sub_team: '+str(sub_teams[1].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize=marker_size, label='sub_team: '+str(sub_teams[2].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize=marker_size, label='sub_team: '+str(sub_teams[3].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize=marker_size, label='sub_team: '+str(sub_teams[4].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#E89541', markersize=marker_size, label='sub_team: '+str(sub_teams[5].sub_team_id)),
+        Line2D([0],[0], marker='s', color='w', markerfacecolor='#D3D3D3', markersize=marker_size, label='not allocated'),
+        ]
+
+    # add legend to graph
+    legend = legend_ax.legend(handles=legend_elements, loc='upper right')
+    for label in legend.get_texts():
+        label.set_fontsize(6)
+    # ax.legend(handles=legend_elements, loc='upper right')
+
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # plot the sub_area geometry        
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            # if a.buildings[i].cleared_by != None:
+                # print(a.buildings[i].cleared_by, i)
+            
+            c = '#D3D3D3'
+            if a.buildings[i].cleared_by == sub_teams[0]:
+                c = '#133046'
+            if a.buildings[i].cleared_by == sub_teams[1]:
+                c = '#15959F'         
+            if a.buildings[i].cleared_by == sub_teams[2]:
+                c = '#F1E4B3'
+            if a.buildings[i].cleared_by == sub_teams[3]:
+                c = '#EC9770'
+            if a.buildings[i].cleared_by == sub_teams[4]:
+                c = '#E89541'
+            if a.buildings[i].cleared_by == sub_teams[5]:
+                c = '#C7402D'                                                                
+
+            # if len(sub_teams) > 1 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[1].sub_team_id:
+            #         c = '#15959F'
+            # if len(sub_teams) > 2 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[2].sub_team_id:
+            #         c = '#F1E4B3'
+            # if len(sub_teams) > 3 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[3].sub_team_id:
+            #         c = '#EC9770'
+            # if len(sub_teams) > 4 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[4].sub_team_id:
+            #         c = '#E89541'
+            # if len(sub_teams) > 5 and a.buildings[i].cleared_by != None:
+            #     if a.buildings[i].cleared_by.sub_team_id == sub_teams[5].sub_team_id:
+            #         c = '#C7402D'
+
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    ax.axis('off')
+    legend_ax.axis('off')
+    fig.savefig('images/allocated_to_p2.png', dpi=300)
+    legend_fig.savefig('images/allocated_to_p2_legend.png', dpi=300)
+    plt.show()
+    # print(f'safe_count: {safe_count}')
+
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_damage_states_buildings(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # create legend
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D'
+    legend_elements = [
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize='10', label='DS2'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize='10', label='DS3'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize='10', label='DS4'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize='10', label='DS5')
+    ]
+
+    # add legend to graph
+    legend_fig, legend_ax = plt.subplots()
+    legend_ax.legend(handles=legend_elements, loc='upper right')
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')        
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")        
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # # plot the sub_area geometry        
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
             if a.buildings[i].damage_state == 'DS2':
                 c = '#133046'
             elif a.buildings[i].damage_state == 'DS3':
                 c = '#15959F'
             elif a.buildings[i].damage_state == 'DS4':
-                c = '#F1E4B3'
+                c = '#EC9770'
             else:
                 c = '#C7402D'
             x, y = g.exterior.xy
@@ -1759,6 +2150,7 @@ def show_damage_states_buildings(areas):
     # ax.set_aspect('equal')
     plt.axis('off')
     fig.savefig('images/damage_states.png', dpi=300)
+    legend_fig.savefig('images/damage_states_legend.png', dpi=300)
     plt.show()
   
 
@@ -1797,9 +2189,9 @@ def show_structural_system_buildings(areas):
         x, y = a.geometry.exterior.xy
         ax.plot(x, y, 'black')  # You can set a specific color
 
-        # plot the sub_area geometry        
-        for s in a.sub_areas:
-            ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        # # plot the sub_area geometry        
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
         
         # plot the building geometry
         # save each building geometry attribute in a list
@@ -1837,6 +2229,443 @@ def show_structural_system_buildings(areas):
 
 
 # defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_lateral_res_buildings(areas):
+    # create empty graph and plot sub_area geometry to graph
+    fig, ax = plt.subplots()
+
+    # create legend
+    # '#133046', '#15959F', '#F1E4B3', '#EC9770', '#C7402D', '#D3D3D3'
+    legend_fig, legend_ax = plt.subplots()
+    legend_elements = [
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize='10', label='Frame with Infill'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize='10', label='Dual'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize='10', label='Wall'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#EC9770', markersize='10', label='Moment Frame'),
+    ]
+
+    # add legend to graph
+    legend_ax.legend(handles=legend_elements, loc='upper right')
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')              
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")        
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # # plot the sub_area geometry        
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        
+        # plot the building geometry
+        # save each building geometry attribute in a list
+        geos = [o.geometry for o in a.buildings]
+
+        # for every geometry choose a colour, fill the geometry and plot to graph
+        for i, g in enumerate(geos):
+            if a.buildings[i].lateral_resistance == 'LFINF':
+                c = '#133046'
+            elif a.buildings[i].lateral_resistance == 'LDUAL':
+                c = '#F1E4B3'
+            elif a.buildings[i].lateral_resistance == 'LWAL':
+                c = '#15959F'
+            elif a.buildings[i].lateral_resistance == 'LFM':
+                c = '#EC9770'                                                          
+            else:
+                c = '#D3D3D3'
+            x, y = g.exterior.xy
+            ax.fill(x, y, color = c)
+
+    # Display the plot
+    # ax.set_aspect('equal')
+    plt.axis('off')
+    ax.axis('off')    
+    fig.savefig('images/lateral_res.png', dpi=300)
+    legend_fig.savefig('images/lateral_res_legend.png', dpi=300)
+    plt.show()
+
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_injuries(areas):
+    # Create an empty figure and axes
+    fig, ax = plt.subplots()
+    legend_fig, legend_ax = plt.subplots()
+
+    # Create a legend figure and axes
+    # legend_fig, legend_ax = plt.subplots()
+
+    # Define a color map for the population gradient
+    cmap = LinearSegmentedColormap.from_list('Number of Injured * Injury Level', ['#15959F', '#EC9770', '#C7402D'], N=256)
+    injuries = []
+
+    for a in areas:
+        injury = list(sum([building.injuries[1], building.injuries[2] * 2, building.injuries[3] * 3, building.injuries[4] * 4]) for building in a.buildings)
+        injuries.extend(injury)
+    injuries = sorted(injuries, key=lambda x: x, reverse=True)
+    top_injuries = np.average(injuries[:(round(len(injuries)/8))])
+    norm = plt.Normalize(min(injuries), top_injuries)
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')            
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # # Plot the sub-area geometry
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha=0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+
+        # Plot the building geometry with population gradient
+        injury = list(sum([building.injuries[1], building.injuries[2] * 2, building.injuries[3] * 3, building.injuries[4] * 4]) for building in a.buildings)
+        for i, building in enumerate(a.buildings):
+            x, y = building.geometry.exterior.xy
+            colors = cmap(norm(injury[i]))
+            ax.fill(x, y, color=colors)
+
+    # Create a colorbar for the population gradient
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = legend_fig.colorbar(sm, ax=legend_ax, label='Number of Injured * Injury Level')
+
+    # Customize the plot
+    # ax.set_aspect('equal')
+    ax.axis('off')
+    legend_ax.axis('off')
+
+    # Save the figure with a higher resolution
+    fig.savefig('images/injuries.png', dpi=300)
+    legend_fig.savefig('images/injuries_legend.png', dpi=300)
+
+    # Display the plot
+    plt.show()
+
+
+
+def show_injury0(areas):
+    # Create an empty figure and axes
+    fig, ax = plt.subplots()
+    legend_fig, legend_ax = plt.subplots()
+
+    # Create a legend figure and axes
+    # legend_fig, legend_ax = plt.subplots()
+
+    # Define a color map for the population gradient
+    cmap = LinearSegmentedColormap.from_list('Number of Injured', ['#15959F', '#EC9770', '#C7402D'], N=256)
+    injuries = []
+
+    for a in areas:
+        injury = list(building.injuries[0] for building in a.buildings)
+        injuries.extend(injury)
+    injuries = sorted(injuries, key=lambda x: x, reverse=True)
+    top_injuries = np.average(injuries[:(round(len(injuries)/8))])
+    norm = plt.Normalize(min(injuries), top_injuries)
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')            
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # # Plot the sub-area geometry
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha=0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+
+        # Plot the building geometry with population gradient
+        injury = list(building.injuries[0] for building in a.buildings)
+        for i, building in enumerate(a.buildings):
+            x, y = building.geometry.exterior.xy
+            colors = cmap(norm(injury[i]))
+            ax.fill(x, y, color=colors)
+
+    # Create a colorbar for the population gradient
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = legend_fig.colorbar(sm, ax=legend_ax, label='Number of Injured * Injury Level')
+
+    # Customize the plot
+    # ax.set_aspect('equal')
+    ax.axis('off')
+    legend_ax.axis('off')
+
+    # Save the figure with a higher resolution
+    fig.savefig('images/injury0.png', dpi=300)
+    legend_fig.savefig('images/injury0_legend.png', dpi=300)
+
+    # Display the plot
+    plt.show()
+
+
+
+def show_injury1(areas):
+    # Create an empty figure and axes
+    fig, ax = plt.subplots()
+    legend_fig, legend_ax = plt.subplots()
+
+    # Create a legend figure and axes
+    # legend_fig, legend_ax = plt.subplots()
+
+    # Define a color map for the population gradient
+    cmap = LinearSegmentedColormap.from_list('Number of Injured', ['#15959F', '#EC9770', '#C7402D'], N=256)
+    injuries = []
+
+    for a in areas:
+        injury = list(building.injuries[1] for building in a.buildings)
+        injuries.extend(injury)
+    injuries = sorted(injuries, key=lambda x: x, reverse=True)
+    top_injuries = np.average(injuries[:(round(len(injuries)/8))])
+    norm = plt.Normalize(min(injuries), top_injuries)
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')            
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # # Plot the sub-area geometry
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha=0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+
+        # Plot the building geometry with population gradient
+        injury = list(building.injuries[1] for building in a.buildings)
+        for i, building in enumerate(a.buildings):
+            x, y = building.geometry.exterior.xy
+            colors = cmap(norm(injury[i]))
+            ax.fill(x, y, color=colors)
+
+    # Create a colorbar for the population gradient
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = legend_fig.colorbar(sm, ax=legend_ax, label='Number of Injured * Injury Level')
+
+    # Customize the plot
+    # ax.set_aspect('equal')
+    ax.axis('off')
+    legend_ax.axis('off')
+
+    # Save the figure with a higher resolution
+    fig.savefig('images/injury1.png', dpi=300)
+    legend_fig.savefig('images/injury1_legend.png', dpi=300)
+
+    # Display the plot
+    plt.show()
+
+
+
+def show_injury2(areas):
+    # Create an empty figure and axes
+    fig, ax = plt.subplots()
+    legend_fig, legend_ax = plt.subplots()
+
+    # Create a legend figure and axes
+    # legend_fig, legend_ax = plt.subplots()
+
+    # Define a color map for the population gradient
+    cmap = LinearSegmentedColormap.from_list('Number of Injured', ['#15959F', '#EC9770', '#C7402D'], N=256)
+    injuries = []
+
+    for a in areas:
+        injury = list(building.injuries[2] for building in a.buildings)
+        injuries.extend(injury)
+    injuries = sorted(injuries, key=lambda x: x, reverse=True)
+    top_injuries = np.average(injuries[:(round(len(injuries)/8))])
+    norm = plt.Normalize(min(injuries), top_injuries)
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')            
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # # Plot the sub-area geometry
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha=0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+
+        # Plot the building geometry with population gradient
+        injury = list(building.injuries[2] for building in a.buildings)
+        for i, building in enumerate(a.buildings):
+            x, y = building.geometry.exterior.xy
+            colors = cmap(norm(injury[i]))
+            ax.fill(x, y, color=colors)
+
+    # Create a colorbar for the population gradient
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = legend_fig.colorbar(sm, ax=legend_ax, label='Number of Injured * Injury Level')
+
+    # Customize the plot
+    # ax.set_aspect('equal')
+    ax.axis('off')
+    legend_ax.axis('off')
+
+    # Save the figure with a higher resolution
+    fig.savefig('images/injury2.png', dpi=300)
+    legend_fig.savefig('images/injury2_legend.png', dpi=300)
+
+    # Display the plot
+    plt.show()
+
+
+
+def show_injury3(areas):
+    # Create an empty figure and axes
+    fig, ax = plt.subplots()
+    legend_fig, legend_ax = plt.subplots()
+
+    # Create a legend figure and axes
+    # legend_fig, legend_ax = plt.subplots()
+
+    # Define a color map for the population gradient
+    cmap = LinearSegmentedColormap.from_list('Number of Injured', ['#15959F', '#EC9770', '#C7402D'], N=256)
+    injuries = []
+
+    for a in areas:
+        injury = list(building.injuries[3] for building in a.buildings)
+        injuries.extend(injury)
+    injuries = sorted(injuries, key=lambda x: x, reverse=True)
+    top_injuries = np.average(injuries[:(round(len(injuries)/8))])
+    norm = plt.Normalize(min(injuries), top_injuries)
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')            
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # # Plot the sub-area geometry
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha=0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+
+        # Plot the building geometry with population gradient
+        injury = list(building.injuries[3] for building in a.buildings)
+        for i, building in enumerate(a.buildings):
+            x, y = building.geometry.exterior.xy
+            colors = cmap(norm(injury[i]))
+            ax.fill(x, y, color=colors)
+
+    # Create a colorbar for the population gradient
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = legend_fig.colorbar(sm, ax=legend_ax, label='Number of Injured * Injury Level')
+
+    # Customize the plot
+    # ax.set_aspect('equal')
+    ax.axis('off')
+    legend_ax.axis('off')
+
+    # Save the figure with a higher resolution
+    fig.savefig('images/injury3.png', dpi=300)
+    legend_fig.savefig('images/injury3_legend.png', dpi=300)
+
+    # Display the plot
+    plt.show()
+
+
+
+def show_injury4(areas):
+    # Create an empty figure and axes
+    fig, ax = plt.subplots()
+    legend_fig, legend_ax = plt.subplots()
+
+    # Create a legend figure and axes
+    # legend_fig, legend_ax = plt.subplots()
+
+    # Define a color map for the population gradient
+    cmap = LinearSegmentedColormap.from_list('Number of Injured', ['#15959F', '#EC9770', '#C7402D'], N=256)
+    injuries = []
+
+    for a in areas:
+        injury = list(building.injuries[4] for building in a.buildings)
+        injuries.extend(injury)
+    injuries = sorted(injuries, key=lambda x: x, reverse=True)
+    top_injuries = np.average(injuries[:(round(len(injuries)/8))])
+    norm = plt.Normalize(min(injuries), top_injuries)
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')            
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # # Plot the sub-area geometry
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha=0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+
+        # Plot the building geometry with population gradient
+        injury = list(building.injuries[4] for building in a.buildings)
+        for i, building in enumerate(a.buildings):
+            x, y = building.geometry.exterior.xy
+            colors = cmap(norm(injury[i]))
+            ax.fill(x, y, color=colors)
+
+    # Create a colorbar for the population gradient
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = legend_fig.colorbar(sm, ax=legend_ax, label='Number of Injured * Injury Level')
+
+    # Customize the plot
+    # ax.set_aspect('equal')
+    ax.axis('off')
+    legend_ax.axis('off')
+
+    # Save the figure with a higher resolution
+    fig.savefig('images/injury4.png', dpi=300)
+    legend_fig.savefig('images/injury4_legend.png', dpi=300)
+
+    # Display the plot
+    plt.show()
+
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
 def show_occupancy_type_buildings(areas):
     # create empty graph and plot sub_area geometry to graph
     fig, ax = plt.subplots()
@@ -1847,7 +2676,7 @@ def show_occupancy_type_buildings(areas):
     legend_elements = [
     Line2D([0],[0], marker='s', color='w', markerfacecolor='#133046', markersize='10', label='residential'),
     Line2D([0],[0], marker='s', color='w', markerfacecolor='#15959F', markersize='10', label='commercial'),
-    Line2D([0],[0], marker='s', color='w', markerfacecolor='#F1E4B3', markersize='10', label='industrial'),
+    Line2D([0],[0], marker='s', color='w', markerfacecolor='#C7402D', markersize='10', label='industrial'),
     ]
 
     # add legend to graph
@@ -1866,9 +2695,9 @@ def show_occupancy_type_buildings(areas):
         x, y = a.geometry.exterior.xy
         ax.plot(x, y, 'black')  # You can set a specific color
 
-        # plot the sub_area geometry        
-        for s in a.sub_areas:
-            ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+        # # plot the sub_area geometry        
+        # for s in a.sub_areas:
+        #     ax.plot(*s.geometry.exterior.xy, 'black', alpha = 0.5, linewidth=0.4, linestyle=(0, (4, 8)))
         
         # plot the building geometry
         # save each building geometry attribute in a list
@@ -1881,7 +2710,7 @@ def show_occupancy_type_buildings(areas):
             elif a.buildings[i].occupancy_type == 'commercial':
                 c = '#15959F'
             elif a.buildings[i].occupancy_type == 'industrial':
-                c = '#F1E4B3'                                               
+                c = '#C7402D'                                               
             else:
                 c = '#D3D3D3'
             x, y = g.exterior.xy
@@ -1952,15 +2781,67 @@ def show_population_night_buildings(areas):
 
 
 # defines a function which plots the geometry of the areas, sub_areas and buildings
-def show_priority_score_buildings(areas, sub_team):
+def show_priority_weight_buildings(areas):
     # Create an empty figure and axes
     fig, ax = plt.subplots()
-
-    # Create a legend figure and axes
-    # legend_fig, legend_ax = plt.subplots()
+    legend_fig, legend_ax = plt.subplots()
 
     # Define a color map for the population gradient
-    cmap = LinearSegmentedColormap.from_list('Priority score for sub_team '+str(sub_team.sub_team_id), ['#15959F', '#EC9770', '#C7402D'], N=256)
+    cmap = LinearSegmentedColormap.from_list('Priority weight', ['#15959F', '#EC9770', '#C7402D'], N=256)
+
+    for a in areas:
+        # Plot the network in the area
+        network = ox.graph_from_polygon(a.geometry, network_type='all')
+        nodes, edges = ox.graph_to_gdfs(network)
+        network_gdf = edges.to_crs('EPSG:4326')            
+        
+        # Plot the network in the area
+        network_gdf.plot(ax=ax, linewidth=0.4, edgecolor="#D3D3D3")
+
+        # Plot the area exterior boundary
+        x, y = a.geometry.exterior.xy
+        ax.plot(x, y, 'black')  # You can set a specific color
+
+        # Plot the sub-area geometry
+        for s in a.sub_areas:
+            ax.plot(*s.geometry.exterior.xy, 'black', alpha=0.5, linewidth=0.4, linestyle=(0, (4, 8)))
+
+        # Plot the building geometry with population gradient
+        priority_scores = list(building.priority_weight for building in a.buildings)
+        norm = plt.Normalize(min(priority_scores), max(priority_scores))
+        
+        for i, building in enumerate(a.buildings):
+            x, y = building.geometry.exterior.xy
+            colors = cmap(norm(a.buildings[i].priority_weight))
+            ax.fill(x, y, color=colors)
+
+    # Create a colorbar for the population gradient
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = legend_fig.colorbar(sm, ax=legend_ax, label='Priority weight')
+
+    # Customize the plot
+    # ax.set_aspect('equal')
+    ax.axis('off')
+    legend_ax.axis('off')
+
+    # Save the figure with a higher resolution
+    fig.savefig('images/priority_weight.png', dpi=300)
+    legend_fig.savefig('images/priority_weight_legend.png', dpi=300)
+
+    # Display the plot
+    plt.show()
+
+
+
+# defines a function which plots the geometry of the areas, sub_areas and buildings
+def show_factored_priority_weight_buildings(areas, sub_team):
+    # Create an empty figure and axes
+    fig, ax = plt.subplots()
+    legend_fig, legend_ax = plt.subplots()
+
+    # Define a color map for the population gradient
+    cmap = LinearSegmentedColormap.from_list('Factored priority weight for sub_team '+str(sub_team.sub_team_id), ['#15959F', '#EC9770', '#C7402D'], N=256)
 
     for a in areas:
         # Plot the network in the area
@@ -1994,14 +2875,16 @@ def show_priority_score_buildings(areas, sub_team):
     # Create a colorbar for the population gradient
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax, label='Factored priority score for sub_team '+str(sub_team.sub_team_id))
+    cbar = legend_fig.colorbar(sm, ax=legend_ax, label='Factored priority weight for sub_team '+str(sub_team.sub_team_id))
 
     # Customize the plot
-    ax.set_aspect('equal')
+    # ax.set_aspect('equal')
     ax.axis('off')
+    legend_ax.axis('off')
 
     # Save the figure with a higher resolution
-    fig.savefig('images/priority_score.png', dpi=300)
+    fig.savefig('images/factored_weight_score.png', dpi=300)
+    legend_fig.savefig('images/factored_weight_score_legend.png', dpi=300)
 
     # Display the plot
     plt.show()
