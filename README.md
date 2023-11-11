@@ -17,6 +17,10 @@ Make sure you have the following Python libraries installed:
 - random
 - shapely
 
+> [!NOTE]
+> Grasshopper in rhino environment is used to visualise some information in 3D layout.
+
+
 Read below to install the libraries if they are missing.
 
 ### PyPI
@@ -32,15 +36,60 @@ pip install scipy
 ```
 ## Usage
 Step 1: Clone the repository
+
 Step 2: Navigate to the Project Directory to find trial_1.py and functions.py
+
 Step 3: Install all the relevant dependencies
+
 Step 4: Run clean_program.ipynb
 
+## Project set up
+The project is set up in two parts:
+- Part A: Building & Context Assessment. 
+  - In the immediate aftermath of the earthquake, the tool computes the probable damages and injuries incurred in buildings using theoretical models and heuristics. 
+
+- Part B: Search and Rescue resource allocation and scheduling.
+A two-phased framework is set up in order to optimally allocate resources.
+  - Phase one relies on data gathered from part A and uses a ‘priority weighting method’ to estimate the ‘criticality’ of sites, allowing the allocation of first responders’ capabilities in the initial 24 hours. 
+  - Phase two starts when real-time updates from drones, satellites, recon teams or other sources are received on building conditions and trapped victims. This information guides the preparation of a second phase response, including international specialized teams. The tool aims to optimize resource allocation by matching rescue competence to site requirements and providing a time-sensitive itinerary for response.
+
 ## Input data
-- excel files
+As a proof of concept, we will apply our framework on a case study on the Turkish city of Gaziantep. We will consider three areas of Gaziantep for our framework:
+- Pancarlı Mahallesi
+- Gazi Mahallesi Muhtarlığı
+- Sarıgüllük Mahallesi
 
-## Key Features
+### Part A Building & Context Assessment
+The first part of the project pertains to trying to understand the problem. In this case, it means to gather data as quickly as possible about:
+- The damages incurred by the buildings in the aftermath of the earthquake,
+- The injuries suffered by the building occupants as a result of the above.
 
+The actual surveilled data about injuries and building damages is a collection process that can take hours or days (and is beyond the scope of this project). This means that for a rapid response, the tool must have a  mechanism to predict or project the probable damages and injuries incurred, to facilitate a first phase of prompt SAR response.
+
+Input data used for this process is:
+- Earthquake data
+  - This is a key parameter of the earthquake damage estimation- in this case we primarily use the Intensity Measures. This data is usually available minutes after an earthquake strikes. This data is saved in function called arthquake data which takes these data types for formulation (accg, pga, sa03, sa06, sa10, time). 
+- Building data
+  Building data is required to model the physical entities during the earthquake and measure the impact on its properties. In our case due to lack of formal data sources, distribution of data was used to create synthetic data from ESRM. The building data includes:
+  - Site coordinates and geometry
+  - Building area, height, typology
+  - Primary building material
+  - Occupancy at different times of the day
+- HAZUS code for damage estimation
+  - Data regarding damage states, injuries and occupancy is derived from this manual.
+  - https://www.fema.gov/flood-maps/tools-resources/flood-map-products/hazus/user-technical-manuals
+
+### Part B Search and Rescue resource allocation and scheduling
+The second part of the project is in the aftermath of an earthquake, the allocation and scheduling of resources, particularly the deployment of rescue teams, play a pivotal role in mitigating casualties and minimizing damage. This means that rapid and accurate computing is required for:
+- Allocating rescue teams to areas and sub areas
+- Creating a detailed schedule for teams to know the sequence of buildings to go to.
+
+Input data used for this process is:
+- Building data linked to sub area and area zones
+- Rescue team database
+  - This includes the types of teams, no. of members in each team and their competencies
+  - It also includes the list if possible actions each team can take and how they linked with building damage states
+  - https://www.insarag.org/capacity-building/capacity-intro/
 
 ## Data Processing
 - The first step is to check the dependencies and install all the relevant libraries as shown in requirements.txt
