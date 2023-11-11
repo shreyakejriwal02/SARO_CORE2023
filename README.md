@@ -37,7 +37,7 @@ Step 3: Install all the relevant dependencies
 Step 4: Run clean_program.ipynb
 
 ## Input data
-
+- excel files
 
 ## Key Features
 
