@@ -1476,6 +1476,36 @@ def analyse_sequences(sequences, Rescue_duration):
         
     return top_5_sequences
 
+# local_search_iterations = 10
+
+# current_sequence, current_score = top_5_sequences[0][0], top_5_sequences[0][1]
+# # print(current_sequence)
+# # print(current_score)
+
+# sequence_scores = 0
+
+# for _ in range(local_search_iterations):
+#     current_time = 0
+
+#     # neighbor_sequence = generate_neighbor(current_sequence)
+#     neighbor_sequence = current_sequence
+#     for building_data in neighbor_sequence:
+#         # Access building information directly from the dictionary
+#         building_id = building_data['Building_Id']
+#         building = buildings[building_id]
+
+#         initial_people_counts, people_alive, total_rescued, rescue_time, current_time = calculate_rescue_time(
+#             building, current_time, Rescue_duration=Rescue_duration, buffer_time=20)
+
+#         building_score = calculate_score(initial_people_counts, people_alive)
+#         sequence_scores += building_score
+
+#         if sequence_scores > current_score:
+#             sequence = neighbor_sequence
+#             sequence_scores = sequence_scores
+    
+# print(sequence)
+# print(sequence_scores)
 
 
 def show_schedule(top_5_sequences):    
