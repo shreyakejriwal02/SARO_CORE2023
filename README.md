@@ -201,9 +201,23 @@ Total Rescue Time: 497
 - Using the result we plot them in a gantt chart to see the movement of team from one place to other. We also use the top 5 results rather than just the first one due to different focus based on real time situation.
 ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/658aaa67-a14b-4b68-91db-0a6ace50f037)
 
-
 ## Known issues
+### Capacity curves instead of fragility Curves:
+Instead of prbabilistic fragility curves, it might be possible to simplify the building set into a SDOF model and apply the eartquake parameter as a demand spectrum for each building. It would better capture the nonlinear seismic behaviour of buildng materials and components, and take into accont the frequency parameters of the earthquake better.
 
+### Probabilistic Estimation of Lives not advisable for SAR scheduling
+Speaking of real data, it is important to take a step back... fragility curves are likely to provide a good estimatioon of PROBABLE damage states and injuries. This means that the larger the set of buildings in consideration, the closer the estimate.
+
+### Lack of Data Validation:
+The initial phase of the allocation process relies entirely on simulation results derived from Part A analysis. In real-world scenarios, this methodology may pose risks, potentially leading to the deployment of
+teams to unsuitable locations or overlooking buildings erroneously classified, thereby jeopardizing team safety.
+
+### Unforeseen Changes on Site:
+In a disaster scenario, the most significant factor is the continually changing dynamics on site. The situation evolves over time periods, necessitating a robust system capable of updating and adapting to the
+changing scenarios involving the site, teams, and resources. Eg. risk of secondary disasters, or critical rescue process.
+
+## More details
+For additional information on the process and research please check out the report in the report folder.
 
 ## Credits
 Bo Valkenburg, Brent Smeekes, Pavan Sathyamurthy, Shreya Kejriwal.
