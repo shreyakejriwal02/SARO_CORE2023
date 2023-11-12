@@ -1290,6 +1290,32 @@ def calculate_score(initial_people_counts: list[int], people_alive: list[int]) -
     
     return total_score
 
+# Function to check if the end time is reached
+# def is_end_time_reached(current_time, end_time):
+#     return current_time >= end_time
+
+# def generate_neighbor(sequence):
+#     # Access the sequence from the tuple (building data, score)
+#     sequence_data, _ = sequence
+    
+#     # Generate a neighboring solution by swapping two buildings in the sequence
+#     neighbor_sequence = sequence_data.copy()
+    
+#     # Find indices of buildings with damage states 3, 4, 5 and 1, 2
+#     indices_priority = [i for i, b in enumerate(neighbor_sequence) if b["Damage_State"] in [3, 4, 5]]
+#     indices_normal = [i for i, b in enumerate(neighbor_sequence) if b["Damage_State"] in [1, 2]]
+
+#     # Check if there are buildings with damage states 3, 4, 5 and 1, 2
+#     if len(indices_priority) >= 2 and len(indices_normal) >= 2:
+#         # Swap two buildings within the same damage state category
+#         i_priority, j_priority = random.sample(indices_priority, 2)
+#         i_normal, j_normal = random.sample(indices_normal, 2)
+        
+#         # Swap buildings
+#         neighbor_sequence[i_priority], neighbor_sequence[j_priority] = neighbor_sequence[j_priority], neighbor_sequence[i_priority]
+#         neighbor_sequence[i_normal], neighbor_sequence[j_normal] = neighbor_sequence[j_normal], neighbor_sequence[i_normal]
+
+#     return neighbor_sequence
 
 
 def generate_building_sequences(buildings: list[dict], n: int) -> list[list[dict]]:
