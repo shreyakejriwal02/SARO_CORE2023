@@ -85,32 +85,56 @@ The second part of the project is in the aftermath of an earthquake, the allocat
 - Creating a detailed schedule for teams to know the sequence of buildings to go to.
 
 Input data used for this process is:
-- Building data linked to sub area and area zones
+- Building data linked to sub area and area zones. This will also include damage state and injury profile data from the previous part.
 - Rescue team database
   - This includes the types of teams, no. of members in each team and their competencies
-  - It also includes the list if possible actions each team can take and how they linked with building damage states
+  - It also includes the list of possible actions each team can take and how they linked with building damage states. Each building in a certain damage state, height and typology has a set of actions associated to it. Currently these are synthetic but in future it would be from site inspection and better predicting models.
   - https://www.insarag.org/capacity-building/capacity-intro/
 
 ## Data Processing
 - The first step is to check the dependencies and install all the relevant libraries as shown in requirements.txt
-- Input the address of the desired area for visualization and processing.
+- Open the clean_program.py to see the example for the entire part A and part B process. Start with importing all the relevant libraries
+- Input the address of the desired area for visualization and processing, in this case the following areas were visualised and processed.
 ```
 addresses = ['Sarıgüllük Mahallesi', 'Gazi Mah., Gaziantep', 'Pancarlı Mahallesi']
 ```
-- Using OpenStreetMaps and Matplotlib library visualise the desired area.
-  
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/ca4fdce0-4d6e-488a-96a6-53424b3e4573)
-- Import earthquake data (accg, pga, sa03, sa06, sa10, time) from the available dataset of past earthquakes
-- Import buildings on the addresses mentioned earlier and call the function to add earthquake attribute to buildings for processing damage states and other impacts.
-- Visualise the damage states, occupancy and building_typology for one area to understand distribution of data and characteristics.
-  
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/426b92bc-7d44-4d5a-9039-cb11e2ca5836)
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/ae4e9ad0-ac1d-41af-82fb-e54943649570)
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/d9139815-d7c8-4dfe-8ad3-b0faa3fe876b)
-- Divide the area into multiple sub areas, generating the priority weight for each building, sub area and area.
-  
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/7611564b-f6ff-4600-b3f2-815a5007a298)
-- Allocate teams to areas based of input of number of teams. This is a user input. The different team types have been mentioned earlier in the document. This is done via a factored weight approach matching the demand of an area to the competency score of teams.
+- Using OpenStreetMaps and Matplotlib library we visualise the desired area in the python file.
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/7d9883a3-f086-4719-aab4-df307623f4a5)
+
+- Next we import the earthquake data in this format (accg, pga, sa03, sa06, sa10, time) from the available dataset of past earthquakes. In this particular case, the earthquake in Turkey was used.
+```
+Turkey_Feb2023_Quake= Earthquake(9.8, 0.49, 0.98, 0.98, 1.2, 400)
+```
+- Import buildings on the addresses mentioned earlier and call the function to add earthquake attribute to buildings for processing damage states and other impacts. We first visualise the base data like occupancy, structural_system and building_typology for one area to understand distribution of data and characteristics.
+Building geometry: 
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/53bccad6-1c93-49d4-b1e1-9fc51f0542f9)
+Occupancy:
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/cba26bb9-4985-4210-ad58-6062b024b653)
+Structural system:
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/480f6a7a-6039-48a6-b796-6679da197373)
+
+- Next we divide the area into multiple sub areas, generating the damage state and injury distribution.
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/1dffe1c6-fc45-4386-bc35-a767c62cb1bd)
+Damage state distribution in an area:
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/06c7881c-9c3e-4ba2-8b45-ad87db66046a)
+Overall injury profile in an area:
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/5af996cb-bab9-4e28-a5df-2f294d482f5c)
+
+  - Injury class 0
+    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/d99db459-54ee-4395-abcb-a26c93ef9889)
+  - Injury class 1
+    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/f598ff7c-8daa-4577-b0c8-80211844bc5d)
+  - Injury class 2
+    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/650702f0-7909-4fe2-b92b-e4cfbeb084f7)
+  - Injury class 3
+    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/c3933365-7a1e-4062-862c-5a08b1f29aef)
+  - Injury class 4
+    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/87e1b9bf-65a1-4df7-b83a-3f73a47562c3)
+
+- We later use the damage state distribution and injury weights to generate priority weight for each building, sub area and area
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/f4ef3a68-a003-4d50-a1ff-4c0a4f32fe8d)
+
+- Allocate teams to areas based of input of number of teams. This is a user input. It depends on the distribution of teams available when creating the allocation and scheduling. The different team types have been mentioned earlier in the document. This is done via a factored weight approach matching the demand of an area to the competency score of teams.
 - Retrieve the sub_teams from the teams object that are allocated to a particular area to generate a list of area-sub_team relationship.
 - Select a sub_team from the generated rooster and check for all the possible actions the team can take and its overall competency score for phase 1.
 ```
@@ -127,9 +151,56 @@ Confined Space Rope Rescue: 1
 Knot Tying: 3
 ...
 ```
-- 
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/2e8021ff-2547-4773-b184-67fc8220b77e)
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/6b9d8b7b-4ac7-46e7-82c6-e00ce39c8e4d)
+- Using allocate_sub_team_phase1 function find the best match for the sub teams to the sub areas.
+```
+------------------------------
+sub_team 5 assigned to sub_area <trial_1.Sub_Area object at 0x000002A756FF9F40>
+amount of cleared buildings in area: 6
+------------------------------
+sub_team 4 assigned to sub_area <trial_1.Sub_Area object at 0x000002A756FF9700>
+amount of cleared buildings in area: 12
+------------------------------
+sub_team 4 assigned to sub_area <trial_1.Sub_Area object at 0x000002A756FF9520>
+amount of cleared buildings in area: 15
+------------------------------
+```
+- We can then see which sub teams are allocated to which sub area within an area. It also shows how many buildings the team was able to clear.
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/e8001a03-0bc1-4597-8ab4-e302cb51e34b)
+
+- We use the same approach for phase 2 allocation
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/3152bbe7-d51b-48e1-a56e-ac05e5168945)
+
+- For the next part of the program we find the time required to save a person in a certain building using a predefined mathematical formulation.
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/79bccd07-fe0f-4b59-b91d-0b7e865085bb)
+
+- Using the simulation based algorithm we can define the number of simulations providing us with the best sequence for the team with their score, lives saved and time taken
+```
+Top 1 Sequence Score: 193.5
+Total Rescued: 97
+Total Rescue Time: 497
+  Building ID: 10
+  Initial People Count: [1, 1, 0, 0]
+  Rescue distribution: [0, 0, 0, 0]
+  Total Rescued: 0
+  Total Rescue Time (in minutes): 0
+--------------------
+  Building ID: 8
+  Initial People Count: [8, 4, 1, 2]
+  Rescue distribution: [4, 3, 0, 1]
+  Total Rescued: 8
+  Total Rescue Time (in minutes): 46
+--------------------
+  Building ID: 6
+  Initial People Count: [36, 18, 4, 9]
+  Rescue distribution: [21, 13, 3, 8]
+  Total Rescued: 45
+  Total Rescue Time (in minutes): 173
+  ...
+```
+
+- Using the result we plot them in a gantt chart to see the movement of team from one place to other. We also use the top 5 results rather than just the first one due to different focus based on real time situation.
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/658aaa67-a14b-4b68-91db-0a6ace50f037)
+
 
 ## Known issues
 
