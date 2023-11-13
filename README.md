@@ -107,7 +107,7 @@ Turkey_Feb2023_Quake= Earthquake(9.8, 0.49, 0.98, 0.98, 1.2, 400)
 ```
 - Import buildings on the addresses mentioned earlier and call the function to add earthquake attribute to buildings for processing damage states and other impacts. We first visualise the base data like occupancy, structural_system and building_typology for one area to understand distribution of data and characteristics.
 Building geometry: 
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/53bccad6-1c93-49d4-b1e1-9fc51f0542f9)
+![all_areas](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/26617910-9b16-4b48-9962-d4e83f31e3a7)
 Occupancy:
 ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/cba26bb9-4985-4210-ad58-6062b024b653)
 Structural system:
