@@ -200,7 +200,7 @@ Total Rescue Time: 497
 ```
 
 - Using the result we plot them in a gantt chart to see the movement of team from one place to other. We also use the top 5 results rather than just the first one due to different focus based on real time situation.
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/658aaa67-a14b-4b68-91db-0a6ace50f037)
+![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/1fe88ea7-23b2-434a-a096-3540ad150831)
 
 ## Known issues
 ### Capacity curves instead of fragility Curves:
