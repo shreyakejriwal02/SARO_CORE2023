@@ -107,32 +107,32 @@ Turkey_Feb2023_Quake= Earthquake(9.8, 0.49, 0.98, 0.98, 1.2, 400)
 ```
 - Import buildings on the addresses mentioned earlier and call the function to add earthquake attribute to buildings for processing damage states and other impacts. We first visualise the base data like occupancy, structural_system and building_typology for one area to understand distribution of data and characteristics.
 Building geometry: 
-![all_areas](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/26617910-9b16-4b48-9962-d4e83f31e3a7)
+![all_geometry](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/58da1ff8-a2a4-4a4f-85be-d13e3014a4e0)
 Occupancy:
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/cba26bb9-4985-4210-ad58-6062b024b653)
+![occupancy_type](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/a43949ea-c120-4ace-a8a7-ba145514d075)
 Structural system:
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/480f6a7a-6039-48a6-b796-6679da197373)
+![structural_systems](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/50fa561b-df37-4aab-b006-6f638958195c)
 
 - Next we divide the area into multiple sub areas, generating the damage state and injury distribution.
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/1dffe1c6-fc45-4386-bc35-a767c62cb1bd)
+![all_sub_areas](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/48478800-c7bb-45e4-b477-52e57c5f85ac)
 Damage state distribution in an area:
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/06c7881c-9c3e-4ba2-8b45-ad87db66046a)
+![damage_states](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/c04b747f-2468-42d2-8006-e355e8706a32)
 Overall injury profile in an area:
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/5af996cb-bab9-4e28-a5df-2f294d482f5c)
+![injuries](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/552dee35-d325-4714-ac4f-2e5803ce86fc)
 
   - Injury class 0
-    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/d99db459-54ee-4395-abcb-a26c93ef9889)
+    ![injury0](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/5c7985fd-96ab-41e9-aaa1-fb83c0aac292)
   - Injury class 1
-    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/f598ff7c-8daa-4577-b0c8-80211844bc5d)
+    ![injury1](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/fc59d7b7-9918-47f4-b654-fbf57e98b170)
   - Injury class 2
-    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/650702f0-7909-4fe2-b92b-e4cfbeb084f7)
+    ![injury2](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/7e24a7f1-2f75-4132-9229-3ebc50b9be00)
   - Injury class 3
-    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/c3933365-7a1e-4062-862c-5a08b1f29aef)
+    ![injury3](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/6923beb9-b799-42b5-8b72-b2e8fc2a6053)
   - Injury class 4
-    ![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/87e1b9bf-65a1-4df7-b83a-3f73a47562c3)
+    ![injury4](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/bf91d8c6-0e97-4566-bfef-b465fe69a5b5)
 
 - We later use the damage state distribution and injury weights to generate priority weight for each building, sub area and area
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/f4ef3a68-a003-4d50-a1ff-4c0a4f32fe8d)
+![priority_weight](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/88918fce-fafd-468a-ae04-07ef625ebb75)
 
 - Allocate teams to areas based of input of number of teams. This is a user input. It depends on the distribution of teams available when creating the allocation and scheduling. The different team types have been mentioned earlier in the document. This is done via a factored weight approach matching the demand of an area to the competency score of teams.
 - Retrieve the sub_teams from the teams object that are allocated to a particular area to generate a list of area-sub_team relationship.
@@ -165,13 +165,14 @@ amount of cleared buildings in area: 15
 ------------------------------
 ```
 - We can then see which sub teams are allocated to which sub area within an area. It also shows how many buildings the team was able to clear.
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/e8001a03-0bc1-4597-8ab4-e302cb51e34b)
+![allocated_to](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/28730acd-217a-403e-b07a-72849066459c)
+![buildings_cleared_by_sub_team](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/30f1a808-7f17-4c15-b38c-6de0fd001fcf)
 
 - We use the same approach for phase 2 allocation
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/3152bbe7-d51b-48e1-a56e-ac05e5168945)
+![allocated_to_p2](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/e3fb8bb7-6f1e-4c9d-bfa4-b7e30f2bc6f4)
 
 - For the next part of the program we find the time required to save a person in a certain building using a predefined mathematical formulation.
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/79bccd07-fe0f-4b59-b91d-0b7e865085bb)
+![rescue_duration_person](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/1e810501-f056-43af-b155-7d60d8d24dfe)
 
 - Using the simulation based algorithm we can define the number of simulations providing us with the best sequence for the team with their score, lives saved and time taken
 ```
