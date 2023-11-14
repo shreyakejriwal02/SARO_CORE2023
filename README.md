@@ -99,7 +99,7 @@ Input data used for this process is:
 addresses = ['Sarıgüllük Mahallesi', 'Gazi Mah., Gaziantep', 'Pancarlı Mahallesi']
 ```
 - Using OpenStreetMaps and Matplotlib library we visualise the desired area in the python file.
-![image](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/7d9883a3-f086-4719-aab4-df307623f4a5)
+![all_areas](https://github.com/shreyakejriwal02/SARO_CORE2023/assets/146780231/26617910-9b16-4b48-9962-d4e83f31e3a7)
 
 - Next we import the earthquake data in this format (accg, pga, sa03, sa06, sa10, time) from the available dataset of past earthquakes. In this particular case, the earthquake in Turkey was used.
 ```
